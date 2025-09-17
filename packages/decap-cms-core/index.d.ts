@@ -380,6 +380,11 @@ declare module 'decap-cms-core' {
     allowed_hosts?: string[];
   }
 
+  export interface CmsLocalPreviewMirror {
+    url?: string;
+    allowed_hosts?: string[];
+  }
+
   export interface CmsConfig {
     backend: CmsBackend;
     collections: CmsCollection[];
@@ -409,6 +414,7 @@ declare module 'decap-cms-core' {
     slug?: CmsSlug;
     i18n?: CmsI18nConfig;
     local_backend?: boolean | CmsLocalBackend;
+    local_preview_mirror?: CmsLocalPreviewMirror;
     editor?: {
       preview?: boolean;
     };

@@ -210,7 +210,9 @@ export function previewUrlFormatter(
     throw err;
   }
 
-  const previewPath = trimStart(compiledPath, ' /');
+  let previewPath = trimStart(compiledPath, ' /');
+  // Strip trailing '/index' or '/index/' from nested index.md URLs
+  previewPath = previewPath.replace(/\/(index\/?)(?=$|\?)/i, '/');
   return `${basePath}/${previewPath}`;
 }
 

@@ -473,6 +473,45 @@ function getPublishMode(config: CmsConfig, publishModes?: CmsPublishMode[], back
   return config.publish_mode;
 }
 
+export async function detectMirrorProxy(localPreviewMirror?: CmsLocalPreviewMirror) {
+  if (!localPreviewMirror?.url) {
+    return {};
+  }
+
+  const allowedHosts = [
+    'localhost',
+    '127.0.0.1',
+    ...(localPreviewMirror.allowed_hosts || []),
+  ];
+
+  if (!allowedHosts.includes(location.hostname)) {
+    return {};
+  }
+
+  try {
+    console.log(`Looking for Decap CMS Mirror Proxy Server at '${localPreviewMirror.url}'`);
+    const res = await fetch(`${localPreviewMirror.url}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'info' }),
+    });
+    const { repo, type } = (await res.json()) as {
+      repo?: string;
+      type?: string;
+    };
+    if (typeof repo === 'string' && typeof type === 'string') {
+      console.log(`Detected Decap CMS Mirror Proxy Server at '${localPreviewMirror.url}' with repo: '${repo}'`);
+      return { mirrorProxyUrl: localPreviewMirror.url };
+    } else {
+      console.log(`Decap CMS Mirror Proxy Server not detected at '${localPreviewMirror.url}'`);
+      return {};
+    }
+  } catch {
+    console.log(`Decap CMS Mirror Proxy Server not detected at '${localPreviewMirror.url}'`);
+    return {};
+  }
+}
+
 export async function handleLocalBackend(originalConfig: CmsConfig) {
   if (!originalConfig.local_backend) {
     return originalConfig;
@@ -519,6 +558,13 @@ export function loadConfig(manualConfig: Partial<CmsConfig> = {}, onLoad: () => 
       validateConfig(mergedConfig);
 
       const withLocalBackend = await handleLocalBackend(mergedConfig);
+      
+      // Check for local preview mirror
+      const { mirrorProxyUrl } = await detectMirrorProxy(withLocalBackend.local_preview_mirror);
+      if (mirrorProxyUrl) {
+        withLocalBackend.backend.mirror_proxy_url = mirrorProxyUrl;
+      }
+      
       const normalizedConfig = normalizeConfig(withLocalBackend);
 
       const config = applyDefaults(normalizedConfig);

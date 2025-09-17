@@ -346,6 +346,7 @@ export class Editor extends React.Component {
       user,
       hasChanged,
       displayUrl,
+      config,
       hasWorkflow,
       useOpenAuthoring,
       unpublishedEntry,
@@ -359,6 +360,7 @@ export class Editor extends React.Component {
       slug,
       t,
       editorBackLink,
+      // Duplicate 'config' entry existed; remove duplicate binding
     } = this.props;
 
     const isPublished = !newEntry && !unpublishedEntry;
@@ -376,6 +378,8 @@ export class Editor extends React.Component {
     ) {
       return <Loader active>{t('editor.editor.loadingEntry')}</Loader>;
     }
+
+    const hasWorkflowEffective = hasWorkflow && !(config && config.local_backend);
 
     return (
       <EditorInterface
@@ -398,7 +402,7 @@ export class Editor extends React.Component {
         user={user}
         hasChanged={hasChanged}
         displayUrl={displayUrl}
-        hasWorkflow={hasWorkflow}
+        hasWorkflow={hasWorkflowEffective}
         useOpenAuthoring={useOpenAuthoring}
         hasUnpublishedChanges={unpublishedEntry}
         isNewEntry={newEntry}
@@ -408,6 +412,7 @@ export class Editor extends React.Component {
         deployPreview={deployPreview}
         loadDeployPreview={opts => loadDeployPreview(collection, slug, entry, isPublished, opts)}
         editorBackLink={editorBackLink}
+        config={config}
         t={t}
       />
     );

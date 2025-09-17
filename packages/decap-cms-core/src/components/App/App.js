@@ -192,6 +192,7 @@ class App extends React.Component {
           logo={config.logo}
           isTestRepo={config.backend.name === 'test-repo'}
           showMediaButton={showMediaButton}
+          showMirrorStatus={!!config.backend.mirror_proxy_url}
         />
         <AppMainContainer>
           {isFetching && <TopBarProgress />}

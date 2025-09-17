@@ -287,6 +287,9 @@ export class EditorToolbar extends React.Component {
     if (!isNewEntry) {
       loadDeployPreview({ maxAttempts: 3 });
     }
+
+    // Ctrl+D is handled globally in EditorInterface; avoid duplicate listeners
+    this._handleKeyDown = null;
   }
 
   componentDidUpdate(prevProps) {
@@ -294,6 +297,11 @@ export class EditorToolbar extends React.Component {
     if (!isNewEntry && prevProps.isPersisting && !isPersisting) {
       loadDeployPreview({ maxAttempts: 3 });
     }
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('keydown', this._handleKeyDown, true);
+    document.removeEventListener('keydown', this._handleKeyDown, true);
   }
 
   renderSimpleControls = () => {

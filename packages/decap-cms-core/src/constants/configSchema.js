@@ -156,6 +156,17 @@ function getConfigSchema() {
           },
         ],
       },
+      local_preview_mirror: {
+        type: 'object',
+        properties: {
+          url: { type: 'string', examples: ['http://localhost:8081/api/v1'] },
+          allowed_hosts: {
+            type: 'array',
+            items: { type: 'string' },
+          },
+        },
+        additionalProperties: false,
+      },
       locale: { type: 'string', examples: ['en', 'fr', 'de'] },
       i18n: i18nRoot,
       site_url: { type: 'string', examples: ['https://example.com'] },

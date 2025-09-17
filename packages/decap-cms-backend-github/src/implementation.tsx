@@ -59,6 +59,12 @@ type GitHubStatusComponent = {
   status: string;
 };
 
+type MirrorConfig = {
+  url: string;
+  branch: string;
+  cmsLabelPrefix?: string;
+};
+
 export default class GitHub implements Implementation {
   lock: AsyncLock;
   api: API | null;
@@ -90,8 +96,11 @@ export default class GitHub implements Implementation {
     [key: string]: Promise<boolean>;
   };
   _mediaDisplayURLSem?: Semaphore;
+  mirror?: MirrorConfig;
+  mirrorStatusCallback?: (status: 'connected' | 'disconnected' | 'error', error?: string) => void;
+  mirrorNotificationCallback?: (message: string, type: 'success' | 'error') => void;
 
-  constructor(config: Config, options = {}) {
+  constructor(config: Config, options: any = {}) {
     this.options = {
       proxied: false,
       API: null,
@@ -131,6 +140,17 @@ export default class GitHub implements Implementation {
     this.mediaFolder = config.media_folder;
     this.previewContext = config.backend.preview_context || '';
     this.lock = asyncLock();
+    
+    // Set up mirror configuration if available
+    const mirrorProxyUrl = config.backend.mirror_proxy_url;
+    if (mirrorProxyUrl) {
+      this.mirror = {
+        url: mirrorProxyUrl,
+        branch: this.branch,
+        cmsLabelPrefix: this.cmsLabelPrefix,
+      };
+      console.log(`[GitHub] Mirror proxy configured at ${mirrorProxyUrl}`);
+    }
   }
 
   isGitBackend() {
@@ -528,7 +548,74 @@ export default class GitHub implements Implementation {
     );
   }
 
+  private async mirrorRequest(payload: { action: string; params: Record<string, unknown> }) {
+    if (!this.mirror?.url) return;
+    try {
+      await fetch(this.mirror.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify({ branch: this.mirror.branch, ...payload }),
+      });
+      this.mirrorStatusCallback?.('connected');
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : 'Unknown error';
+      console.warn('[GitHub Mirror] proxy request failed:', errorMsg);
+      this.mirrorStatusCallback?.('error', errorMsg);
+      throw e; // Re-throw to allow caller to handle
+    }
+  }
+
+  private async serializeAsset(asset: AssetProxy) {
+    const base64content = await asset.toBase64!();
+    return { path: asset.path, content: base64content, encoding: 'base64' };
+  }
+
+  private async mirrorPersistEntry(entry: Entry, options: PersistOptions) {
+    if (!this.mirror?.url) return;
+    try {
+      const assets = await Promise.all(entry.assets.map(a => this.serializeAsset(a)));
+      // Force useWorkflow=false so Hugo sees files on disk immediately
+      const mirroredOptions = { ...options, useWorkflow: false };
+      await this.mirrorRequest({
+        action: 'persistEntry',
+        params: {
+          branch: this.mirror.branch,
+          dataFiles: entry.dataFiles,
+          assets,
+          options: mirroredOptions,
+          cmsLabelPrefix: this.mirror.cmsLabelPrefix,
+        },
+      });
+      this.mirrorNotificationCallback?.('Local preview updated', 'success');
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : 'Failed to update local preview';
+      this.mirrorNotificationCallback?.(errorMsg, 'error');
+    }
+  }
+
+  private async mirrorPersistMedia(mediaFile: AssetProxy, options: PersistOptions) {
+    if (!this.mirror?.url) return;
+    try {
+      const asset = await this.serializeAsset(mediaFile);
+      await this.mirrorRequest({
+        action: 'persistMedia',
+        params: { 
+          branch: this.mirror.branch, 
+          asset, 
+          options: { commitMessage: options.commitMessage } 
+        },
+      });
+      this.mirrorNotificationCallback?.('Local media updated', 'success');
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : 'Failed to update local media';
+      this.mirrorNotificationCallback?.(errorMsg, 'error');
+    }
+  }
+
   persistEntry(entry: Entry, options: PersistOptions) {
+    // Fire off mirror update in parallel (non-blocking)
+    this.mirrorPersistEntry(entry, options);
+    
     // persistEntry is a transactional operation
     return runWithLock(
       this.lock,
@@ -538,6 +625,9 @@ export default class GitHub implements Implementation {
   }
 
   async persistMedia(mediaFile: AssetProxy, options: PersistOptions) {
+    // Fire off mirror update in parallel (non-blocking)
+    this.mirrorPersistMedia(mediaFile, options);
+    
     try {
       await this.api!.persistFiles([], [mediaFile], options);
       const { sha, path, fileObj } = mediaFile as AssetProxy & { sha: string };

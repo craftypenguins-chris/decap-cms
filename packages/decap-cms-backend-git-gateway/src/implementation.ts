@@ -41,6 +41,12 @@ import type {
   DisplayURLObject,
 } from 'decap-cms-lib-util';
 
+type MirrorConfig = {
+  url: string;
+  branch: string;
+  cmsLabelPrefix?: string;
+};
+
 const STATUS_PAGE = 'https://www.netlifystatus.com';
 const GIT_GATEWAY_STATUS_ENDPOINT = `${STATUS_PAGE}/api/v2/components.json`;
 const GIT_GATEWAY_OPERATIONAL_UNITS = ['Git Gateway'];
@@ -153,6 +159,8 @@ export default class GitGateway implements Implementation {
   acceptRoles?: string[];
   tokenPromise?: () => Promise<string>;
   _largeMediaClientPromise?: Promise<Client>;
+  mirror?: MirrorConfig;
+  mirrorNotificationCallback?: (message: string, type: 'success' | 'error') => void;
 
   options: {
     proxied: boolean;
@@ -197,6 +205,17 @@ export default class GitGateway implements Implementation {
     } else {
       this.authType = 'netlify';
       NetlifyAuthenticationPage.authClient = () => this.getAuthClient();
+    }
+    
+    // Set up mirror configuration if available
+    const mirrorProxyUrl = config.backend.mirror_proxy_url;
+    if (mirrorProxyUrl) {
+      this.mirror = {
+        url: mirrorProxyUrl,
+        branch: this.branch,
+        cmsLabelPrefix: this.cmsLabelPrefix,
+      };
+      console.log(`[GitGateway] Mirror proxy configured at ${mirrorProxyUrl}`);
     }
   }
 
@@ -564,7 +583,72 @@ export default class GitGateway implements Implementation {
     return this.backend!.getMediaFile(path);
   }
 
+  private async mirrorRequest(payload: { action: string; params: Record<string, unknown> }) {
+    if (!this.mirror?.url) return;
+    try {
+      await unsentRequest.fetchWithTimeout(this.mirror.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify({ branch: this.mirror.branch, ...payload }),
+      });
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : 'Unknown error';
+      console.warn('[GitGateway Mirror] proxy request failed:', errorMsg);
+      throw e; // Re-throw to allow caller to handle
+    }
+  }
+
+  private async serializeAsset(asset: AssetProxy) {
+    const base64content = await asset.toBase64!();
+    return { path: asset.path, content: base64content, encoding: 'base64' };
+  }
+
+  private async mirrorPersistEntry(entry: Entry, options: PersistOptions) {
+    if (!this.mirror?.url) return;
+    try {
+      const assets = await Promise.all(entry.assets.map(a => this.serializeAsset(a)));
+      // Force useWorkflow=false so Hugo sees files on disk immediately
+      const mirroredOptions = { ...options, useWorkflow: false };
+      await this.mirrorRequest({
+        action: 'persistEntry',
+        params: {
+          branch: this.mirror.branch,
+          dataFiles: entry.dataFiles,
+          assets,
+          options: mirroredOptions,
+          cmsLabelPrefix: this.mirror.cmsLabelPrefix,
+        },
+      });
+      this.mirrorNotificationCallback?.('Local preview updated', 'success');
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : 'Failed to update local preview';
+      this.mirrorNotificationCallback?.(errorMsg, 'error');
+    }
+  }
+
+  private async mirrorPersistMedia(mediaFile: AssetProxy, options: PersistOptions) {
+    if (!this.mirror?.url) return;
+    try {
+      const asset = await this.serializeAsset(mediaFile);
+      await this.mirrorRequest({
+        action: 'persistMedia',
+        params: { 
+          branch: this.mirror.branch, 
+          asset, 
+          options: { commitMessage: options.commitMessage } 
+        },
+      });
+      this.mirrorNotificationCallback?.('Local media updated', 'success');
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : 'Failed to update local media';
+      this.mirrorNotificationCallback?.(errorMsg, 'error');
+    }
+  }
+
   async persistEntry(entry: Entry, options: PersistOptions) {
+    // Fire off mirror update in parallel (non-blocking)
+    this.mirrorPersistEntry(entry, options);
+    
     const client = await this.getLargeMediaClient();
     if (client.enabled) {
       const assets = await getLargeMediaFilteredMediaFiles(client, entry.assets);
@@ -575,6 +659,9 @@ export default class GitGateway implements Implementation {
   }
 
   async persistMedia(mediaFile: AssetProxy, options: PersistOptions) {
+    // Fire off mirror update in parallel (non-blocking)
+    this.mirrorPersistMedia(mediaFile, options);
+    
     const { fileObj, path } = mediaFile;
     const displayURL = fileObj ? URL.createObjectURL(fileObj) : '';
     const client = await this.getLargeMediaClient();

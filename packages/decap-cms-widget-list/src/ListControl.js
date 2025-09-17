@@ -41,16 +41,15 @@ const ObjectControl = DecapCmsWidgetObject.controlComponent;
 const ListItem = styled.div();
 
 const StyledListItemTopBar = styled(ListItemTopBar)`
-  background-color: ${colors.textFieldBorder};
+  background-color: transparent;
+  height: 18px;
+  margin: 2px 0 4px;
+  opacity: 1;
+  transition: color 0.15s, background 0.15s;
 `;
 
 const NestedObjectLabel = styled.div`
-  display: ${props => (props.collapsed ? 'block' : 'none')};
-  border-top: 0;
-  color: ${props => (props.error ? colors.errorText : 'inherit')};
-  background-color: ${colors.textFieldBorder};
-  padding: 13px;
-  border-radius: 0 0 ${lengths.borderRadius} ${lengths.borderRadius};
+  display: none;
 `;
 
 const styleStrings = {
@@ -60,14 +59,30 @@ const styleStrings = {
   objectWidgetTopBarContainer: `
     padding: ${lengths.objectWidgetTopBarContainerPadding};
   `,
+  expandedTight: `
+    padding: 0 !important;
+    & [class*="ControlTopbar"] { display: none !important; }
+    & [class*="ControlContainer"] { margin-top: 0 !important; padding: 0 !important; border: 0 !important; background: transparent !important; }
+    & [class*="TextControl"] { margin-top: 0 !important; }
+    & [class*="ObjectWidgetTopBar"] { display: none !important; }
+    & > div { margin: 0 !important; padding: 0 !important; }
+  `,
 };
 
 const styles = {
   listControlItem: css`
-    margin-top: 18px;
+    margin-top: 6px;
+    border-left: 2px solid #dee2e6;
+    padding-left: 10px;
+    background: transparent;
 
     &:first-of-type {
-      margin-top: 26px;
+      margin-top: 8px;
+    }
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.02);
+      border-left-color: #0969da;
     }
   `,
   listControlItemCollapsed: css`
@@ -174,6 +189,7 @@ function LabelComponent({ field, isActive, hasErrors, uniqueFieldId, isFieldOpti
 
 export default class ListControl extends React.Component {
   childRefs = {};
+  rootRef = React.createRef();
 
   static propTypes = {
     metadata: ImmutablePropTypes.map,
@@ -224,7 +240,25 @@ export default class ListControl extends React.Component {
   componentDidMount() {
     // Manually validate PropTypes - React 19 breaking change
     PropTypes.checkPropTypes(ListControl.propTypes, this.props, 'prop', 'ListControl');
+    document.addEventListener('mousedown', this.handleGlobalMouseDown, true);
   }
+
+  componentWillUnmount() {
+    document.removeEventListener('mousedown', this.handleGlobalMouseDown, true);
+  }
+
+  handleGlobalMouseDown = e => {
+    // Collapse the list and all items when clicking outside of this widget
+    const root = this.rootRef.current;
+    if (!root) return;
+    if (!root.contains(e.target)) {
+      const size = this.props.value ? this.props.value.size : 0;
+      this.setState({
+        listCollapsed: true,
+        itemsCollapsed: Array(size).fill(true),
+      });
+    }
+  };
 
   valueToString = value => {
     let stringValue;
@@ -685,11 +719,10 @@ export default class ListControl extends React.Component {
           allowRemove={field.get('allow_remove', true)}
           allowReorder={field.get('allow_reorder', true)}
           onRemove={partial(this.handleRemove, index)}
+          label={this.objectLabel(item)}
           data-testid={`styled-list-item-top-bar-${key}`}
         />
-        <NestedObjectLabel collapsed={collapsed} error={hasError}>
-          {this.objectLabel(item)}
-        </NestedObjectLabel>
+        {null}
         <ClassNames>
           {({ css, cx }) => (
             <ObjectControl
@@ -697,6 +730,9 @@ export default class ListControl extends React.Component {
                 [css`
                   ${styleStrings.collapsedObjectControl};
                 `]: collapsed,
+                [css`
+                  ${styleStrings.expandedTight};
+                `]: !collapsed,
               })}
               value={item}
               field={field}
@@ -763,6 +799,7 @@ export default class ListControl extends React.Component {
         {({ cx, css }) => (
           <div
             id={forID}
+            ref={this.rootRef}
             className={cx(
               classNameWrapper,
               css`

@@ -10,11 +10,12 @@ import Dropdown, { StyledDropdownButton, DropdownItem } from './Dropdown';
 
 const TopBarContainer = styled.div`
   align-items: center;
-  background-color: ${colors.textFieldBorder};
+  background-color: transparent;
+  border-bottom: 1px solid ${colors.textFieldBorder};
   display: flex;
   justify-content: space-between;
-  margin: 0 -14px;
-  padding: 13px;
+  margin: 0;
+  padding: 6px 0;
 `;
 
 const ExpandButtonContainer = styled.div`
@@ -42,7 +43,18 @@ const ExpandButton = styled.button`
 
 const AddButton = styled.button`
   ${buttons.button}
-  ${buttons.widget}
+  background: transparent;
+  border: 1px dashed ${colors.textFieldBorder};
+  color: ${colors.active};
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: ${colors.activeBackground};
+    border-color: ${colors.active};
+  }
 
   ${Icon} {
     margin-left: 6px;

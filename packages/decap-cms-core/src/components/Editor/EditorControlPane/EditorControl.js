@@ -70,18 +70,44 @@ const styleStrings = {
 };
 
 const ControlContainer = styled.div`
-  margin-top: 16px;
+  margin-top: ${props => {
+    // Group related fields visually
+    const fieldName = props.fieldName || '';
+    if (fieldName === 'category' || fieldName === 'introductions_title' || fieldName === 'services_title') {
+      return '24px'; // More space before section starts
+    }
+    return '12px'; // Less space between related fields
+  }};
+  
+  padding: ${props => {
+    const fieldName = props.fieldName || '';
+    // Add padding for grouped sections
+    if (fieldName === 'introductions' || fieldName === 'services' || fieldName === 'experience') {
+      return '0 0 0 16px';
+    }
+    return '0';
+  }};
+  
+  border-left: ${props => {
+    const fieldName = props.fieldName || '';
+    // Visual grouping with left border
+    if (fieldName === 'introductions' || fieldName === 'services') {
+      return '3px solid #e1e4e8';
+    }
+    return 'none';
+  }};
 
   &:first-of-type {
-    margin-top: 36px;
+    margin-top: 24px;
   }
 `;
 
 const ControlTopbar = styled.div`
   display: flex;
   justify-content: space-between;
-  gap: 20px;
+  gap: 16px;
   align-items: end;
+  margin-bottom: 2px;
 `;
 const ControlErrorsList = styled.ul`
   list-style-type: none;
@@ -96,29 +122,64 @@ const ControlErrorsList = styled.ul`
 
 export const ControlHint = styled.p`
   margin-bottom: 0;
-  padding: 6px 0 0;
-  font-size: 12px;
+  padding: 4px 0 0;
+  font-size: 11px;
   color: ${props =>
     props.error ? colors.errorText : props.active ? colors.active : colors.controlLabel};
   transition: color ${transitions.main};
 `;
 
-function LabelComponent({ field, isActive, hasErrors, uniqueFieldId, isFieldOptional, t }) {
-  const label = `${field.get('label', field.get('name'))}`;
-  const labelComponent = (
-    <FieldLabel isActive={isActive} hasErrors={hasErrors} htmlFor={uniqueFieldId}>
-      {isFieldOptional ? (
-        <>
-          {label}
-          <span>{` (${t('editor.editorControl.field.optional')})`}</span>
-        </>
-      ) : (
-        label
-      )}
-    </FieldLabel>
-  );
+const SectionHeader = styled.div`
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #586069;
+  margin-bottom: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid #e1e4e8;
+`;
 
-  return labelComponent;
+function LabelComponent({ field, isActive, hasErrors, uniqueFieldId, isFieldOptional, t }) {
+  const fieldName = field.get('name');
+  const label = `${field.get('label', field.get('name'))}`;
+  
+  // Determine if this field starts a new section
+  const sectionHeaders = {
+    'draft': 'Publishing',
+    'category': 'Basic Information',
+    'introductions_title': 'Introduction Section',
+    'services_title': 'Services Section',
+    'experience': 'Experience'
+  };
+  
+  const sectionHeader = sectionHeaders[fieldName];
+  
+  // Simplify labels for fields that are part of sections
+  const simplifiedLabels = {
+    'introductions_title': 'Section Title',
+    'services_title': 'Section Title',
+    'introductions': 'Content Paragraphs',
+    'services': 'Service Items'
+  };
+  
+  const displayLabel = simplifiedLabels[fieldName] || label;
+  
+  return (
+    <>
+      {sectionHeader && <SectionHeader>{sectionHeader}</SectionHeader>}
+      <FieldLabel isActive={isActive} hasErrors={hasErrors} htmlFor={uniqueFieldId}>
+        {isFieldOptional ? (
+          <>
+            {displayLabel}
+            <span>{` (${t('editor.editorControl.field.optional')})`}</span>
+          </>
+        ) : (
+          displayLabel
+        )}
+      </FieldLabel>
+    </>
+  );
 }
 
 class EditorControl extends React.Component {
@@ -245,6 +306,7 @@ class EditorControl extends React.Component {
         {({ css, cx }) => (
           <ControlContainer
             className={className}
+            fieldName={fieldName}
             css={css`
               ${isHidden && styleStrings.hidden};
             `}

@@ -7,6 +7,7 @@ import { GlobalStyles } from 'decap-cms-ui-default';
 import { I18n } from 'react-polyglot';
 
 import { store } from './redux';
+import { persistEntry } from './actions/entries';
 import { history } from './routing/history';
 import { loadConfig } from './actions/config';
 import { authenticateUser } from './actions/auth';
@@ -99,6 +100,12 @@ function bootstrap(opts = {}) {
    */
   const root = createRoot(getRoot());
   root.render(<Root />);
+
+  try {
+    console.log('[cms] bootstrap mounted – key listeners should be active');
+  } catch (_) {}
+
+  // Ctrl+D handling is centralized in EditorInterface; avoid duplicate listeners here
 }
 
 export default bootstrap;

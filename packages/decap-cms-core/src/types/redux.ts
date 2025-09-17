@@ -372,6 +372,7 @@ export interface CmsBackend {
   cms_label_prefix?: string;
   squash_merges?: boolean;
   proxy_url?: string;
+  mirror_proxy_url?: string;
   commit_messages?: {
     create?: string;
     update?: string;
@@ -389,6 +390,11 @@ export interface CmsSlug {
 }
 
 export interface CmsLocalBackend {
+  url?: string;
+  allowed_hosts?: string[];
+}
+
+export interface CmsLocalPreviewMirror {
   url?: string;
   allowed_hosts?: string[];
 }
@@ -422,6 +428,7 @@ export interface CmsConfig {
   slug?: CmsSlug;
   i18n?: CmsI18nConfig;
   local_backend?: boolean | CmsLocalBackend;
+  local_preview_mirror?: CmsLocalPreviewMirror;
   editor?: {
     preview?: boolean;
   };

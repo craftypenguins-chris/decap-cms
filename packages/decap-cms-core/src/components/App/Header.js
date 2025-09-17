@@ -19,6 +19,7 @@ import {
 import { connect } from 'react-redux';
 
 import { SettingsDropdown } from '../UI';
+import MirrorStatusIndicator from '../UI/MirrorStatusIndicator';
 import { checkBackendStatus } from '../../actions/status';
 
 const styles = {
@@ -181,6 +182,7 @@ class Header extends React.Component {
       isTestRepo,
       t,
       showMediaButton,
+      showMirrorStatus,
     } = this.props;
 
     const creatableCollections = collections
@@ -246,6 +248,7 @@ class Header extends React.Component {
                 ))}
               </Dropdown>
             )}
+            {showMirrorStatus && <MirrorStatusIndicator />}
             <SettingsDropdown
               displayUrl={displayUrl}
               isTestRepo={isTestRepo}

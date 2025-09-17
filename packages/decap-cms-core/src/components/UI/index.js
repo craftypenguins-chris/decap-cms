@@ -4,3 +4,4 @@ export { FileUploadButton } from './FileUploadButton';
 export { Modal } from './Modal';
 export { default as Notifications } from './Notifications';
 export { default as SettingsDropdown } from './SettingsDropdown';
+export { default as MirrorStatusIndicator } from './MirrorStatusIndicator';

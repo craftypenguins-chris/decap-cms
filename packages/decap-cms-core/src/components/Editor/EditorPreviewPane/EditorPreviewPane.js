@@ -36,6 +36,15 @@ const PreviewPaneFrame = styled(Frame)`
   border-radius: ${lengths.borderRadius};
 `;
 
+const ExternalPreviewIframe = styled.iframe`
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+  background: #fff;
+  border-radius: ${lengths.borderRadius};
+`;
+
 export class PreviewPane extends React.Component {
   getWidget = (field, value, metadata, props, idx = null) => {
     const { getAsset, entry } = props;
@@ -272,6 +281,44 @@ export class PreviewPane extends React.Component {
 
     if (!collection) {
       <PreviewPaneFrame id="preview-pane" head={styleEls} />;
+    }
+
+    // For local_backend, render the real Hugo page via iframe for any folder-based collection
+    try {
+      const isLocalBackend = !!(config && config.local_backend);
+      if (isLocalBackend) {
+        const folder = (collection.get('folder') || '').toString();
+        // section derived from folder, e.g., content/tech-stack -> tech-stack
+        const section = folder.replace(/^\/?content\/?/i, '').replace(/^\/+|\/+$/g, '');
+        const slug = ((entry.get('slug') || '').toString()).replace(/^\/+|\/+$/g, '');
+        const needsSection = section && !slug.startsWith(`${section}/`);
+        const path = needsSection ? `${section}/${slug}` : slug;
+        const base = (typeof window !== 'undefined' && window.location && window.location.origin) || '';
+        let previewUrl = `${base}/${path.replace(/^\/+|\/+$|\/\/+$/g, '')}/`;
+        // Strip trailing '/index' or '/index/' from nested index.md URLs
+        previewUrl = previewUrl.replace(/\/(index\/?)(?=$|\?)/i, '/');
+        if (typeof window !== 'undefined' && window.console) {
+          try { console.log('[local_backend preview] url:', { section, slug, path, previewUrl }); } catch (_) {}
+        }
+        return (
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '6px 8px', borderBottom: '1px solid #e1e4e8', background: '#fafbfc', fontSize: 12 }}>
+              <span style={{ marginRight: 8, wordBreak: 'break-all' }}>{previewUrl}</span>
+              <a href={previewUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: '#0969da' }}>Open in new tab</a>
+            </div>
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <ExternalPreviewIframe
+                id="hugo-external-preview-iframe"
+                src={previewUrl}
+                onError={() => window.alert('Preview failed to load. Is the Hugo server running?')}
+                style={{ width: '100%', height: '100%' }}
+              />
+            </div>
+          </div>
+        );
+      }
+    } catch (e) {
+      // fall back to default below
     }
 
     const initialContent = `

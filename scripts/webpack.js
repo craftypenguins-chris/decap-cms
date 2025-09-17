@@ -8,6 +8,8 @@ const pkg = require(path.join(process.cwd(), 'package.json'));
 
 const isProduction = process.env.NODE_ENV === 'production';
 const isTest = process.env.NODE_ENV === 'test';
+// Allow disabling source maps to reduce memory usage during heavy builds
+const disableSourceMap = process.env.DECAP_NO_SOURCEMAP === '1';
 
 function moduleNameToPath(libName) {
   return path.resolve(__dirname, '..', 'node_modules', libName);
@@ -143,7 +145,7 @@ function baseConfig({ target = isProduction ? 'umd' : 'umddir' } = {}) {
       fallback: { stream: require.resolve('stream-browserify') },
     },
     plugins: Object.values(plugins()).map(plugin => plugin()),
-    devtool: isTest ? '' : 'source-map',
+    devtool: disableSourceMap ? false : isTest ? '' : 'source-map',
     target: 'web',
 
     /**

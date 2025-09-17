@@ -118,6 +118,7 @@ const PreviewPaneContainer = styled.div`
 
 const ControlPaneContainer = styled(PreviewPaneContainer)`
   padding: 0 16px;
+  padding-bottom: 200px; /* ensure bottom space for last widget */
   position: relative;
   overflow-x: hidden;
 `;
@@ -160,6 +161,52 @@ class EditorInterface extends Component {
     previewVisible: localStorage.getItem(PREVIEW_VISIBLE) !== 'false',
     scrollSyncEnabled: localStorage.getItem(SCROLL_SYNC_ENABLED) !== 'false',
     i18nVisible: localStorage.getItem(I18N_VISIBLE) !== 'false',
+  };
+
+  componentDidMount() {
+    try { console.log('[cms] EditorInterface mounted; adding keydown listeners'); } catch (_) {}
+    window.addEventListener('keydown', this.handleGlobalKeyDown, true);
+    document.addEventListener('keydown', this.handleGlobalKeyDown, true);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('keydown', this.handleGlobalKeyDown, true);
+    document.removeEventListener('keydown', this.handleGlobalKeyDown, true);
+  }
+
+  reloadPreviewIframe = (delayMs = 2000) => {
+    setTimeout(() => {
+      try {
+        const iframe = document.getElementById('hugo-external-preview-iframe');
+        if (iframe && iframe.src) {
+          const current = iframe.src;
+          // Force reload with cache-busting query param
+          let next = current.replace(/([?&])r=\d+/, '').replace(/\?$/, '');
+          next += (next.includes('?') ? '&' : '?') + 'r=' + Date.now();
+          iframe.src = next;
+        }
+      } catch (_) {}
+    }, delayMs);
+  };
+
+  componentDidUpdate(prevProps) {
+    const wasPersisting = prevProps.entry.get('isPersisting');
+    const isPersisting = this.props.entry.get('isPersisting');
+    if (wasPersisting && !isPersisting) {
+      // Persist just completed; refresh the external preview iframe if present
+      this.reloadPreviewIframe(2000);
+    }
+  }
+
+  handleGlobalKeyDown = e => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
+      e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+      if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+      this.handleOnPersist();
+      // Fallback refresh in case persist completion isn't observed here
+      this.reloadPreviewIframe(2500);
+    }
   };
 
   handleFieldClick = path => {

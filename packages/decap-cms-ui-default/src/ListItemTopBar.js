@@ -6,9 +6,11 @@ import Icon from './Icon';
 import { colors, lengths, buttons } from './styles';
 
 const TopBar = styled.div`
-  display: flex;
-  justify-content: space-between;
-  height: 26px;
+  display: grid;
+  grid-template-columns: 22px 22px 8px 1fr 22px;
+  align-items: center;
+  column-gap: 6px;
+  height: 22px;
   border-radius: ${lengths.borderRadius} ${lengths.borderRadius} 0 0;
   position: relative;
 `;
@@ -20,7 +22,7 @@ const TopBarButton = styled.button`
   font-size: 16px;
   line-height: 1;
   padding: 0;
-  width: 32px;
+  width: 22px;
   text-align: center;
   cursor: pointer;
   display: flex;
@@ -31,8 +33,25 @@ const TopBarButton = styled.button`
 const TopBarButtonSpan = TopBarButton.withComponent('span');
 
 const DragIconContainer = styled(TopBarButtonSpan)`
-  width: 100%;
+  width: 22px;
   cursor: move;
+`;
+
+const LabelArea = styled.div`
+  flex: 1 1 auto;
+  min-width: 0;
+  color: ${colors.text};
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const Divider = styled.span`
+  display: inline-block;
+  width: 100%;
+  height: 14px;
+  border-left: 1px solid ${colors.textFieldBorder};
 `;
 
 function DragHandle({ Wrapper, id }) {
@@ -55,6 +74,7 @@ function ListItemTopBar(props) {
     dragHandle,
     allowReorder,
     id,
+    label,
   } = props;
   return (
     <TopBar className={className}>
@@ -64,6 +84,8 @@ function ListItemTopBar(props) {
         </TopBarButton>
       ) : null}
       {dragHandle && allowReorder ? <DragHandle Wrapper={dragHandle} id={id} /> : <span></span>}
+      {collapsed && <Divider />}
+      {collapsed && <LabelArea title={label}>{label}</LabelArea>}
       {onRemove && allowRemove ? (
         <TopBarButton onClick={onRemove}>
           <Icon type="close" size="small" />
@@ -82,12 +104,15 @@ ListItemTopBar.propTypes = {
   onRemove: PropTypes.func,
   allowRemove: PropTypes.bool,
   allowReorder: PropTypes.bool,
+  label: PropTypes.string,
 };
 
 const StyledListItemTopBar = styled(ListItemTopBar)`
-  display: flex;
-  justify-content: space-between;
-  height: 26px;
+  display: grid;
+  grid-template-columns: 22px 22px 8px 1fr 22px;
+  align-items: center;
+  column-gap: 6px;
+  height: 22px;
   border-radius: ${lengths.borderRadius} ${lengths.borderRadius} 0 0;
   position: relative;
 `;
