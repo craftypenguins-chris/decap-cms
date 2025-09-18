@@ -46,6 +46,9 @@ export type GitHubUser = Octokit.UsersGetAuthenticatedResponse;
 
 const MAX_CONCURRENT_DOWNLOADS = 10;
 
+// Unique marker to verify bundle freshness for cmsLabelPrefix/status handling
+export const LOCAL_PREVIEW_MIRROR_VERSION = 'mirror-2025-09-18-01';
+
 type ApiFile = { id: string; type: string; name: string; path: string; size: number };
 
 const { fetchWithTimeout: fetch } = unsentRequest;
@@ -149,6 +152,7 @@ export default class GitHub implements Implementation {
         branch: this.branch,
         cmsLabelPrefix: this.cmsLabelPrefix,
       };
+      console.log(`[LocalPreviewMirror][GitHub] version ${LOCAL_PREVIEW_MIRROR_VERSION}`);
       console.log(`[GitHub] Mirror proxy configured at ${mirrorProxyUrl}`);
     }
   }

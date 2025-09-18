@@ -47,6 +47,9 @@ type MirrorConfig = {
   cmsLabelPrefix?: string;
 };
 
+// Unique marker to verify bundle freshness for cmsLabelPrefix/status handling
+export const LOCAL_PREVIEW_MIRROR_VERSION = 'mirror-2025-09-18-01';
+
 const STATUS_PAGE = 'https://www.netlifystatus.com';
 const GIT_GATEWAY_STATUS_ENDPOINT = `${STATUS_PAGE}/api/v2/components.json`;
 const GIT_GATEWAY_OPERATIONAL_UNITS = ['Git Gateway'];
@@ -215,6 +218,7 @@ export default class GitGateway implements Implementation {
         branch: this.branch,
         cmsLabelPrefix: this.cmsLabelPrefix,
       };
+      console.log(`[LocalPreviewMirror][GitGateway] version ${LOCAL_PREVIEW_MIRROR_VERSION}`);
       console.log(`[GitGateway] Mirror proxy configured at ${mirrorProxyUrl}`);
     }
   }
