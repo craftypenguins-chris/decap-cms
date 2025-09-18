@@ -190,6 +190,7 @@ class Header extends React.Component {
       .toList();
 
     const shouldShowLogo = logo?.show_in_header && logo?.src;
+    const adminHref = `${(typeof window !== 'undefined' && window.location && window.location.origin) || ''}/admin`;
 
     return (
       <AppHeader>
@@ -197,7 +198,7 @@ class Header extends React.Component {
           <nav>
             <AppHeaderNavList>
               <li>
-                <AppHeaderNavLink to="/admin" activeClassName="header-link-active">
+                <AppHeaderNavLink as="a" href={adminHref}>
                   <Icon type="home" />
                   Admin
                 </AppHeaderNavLink>
