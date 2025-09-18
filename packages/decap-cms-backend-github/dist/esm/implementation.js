@@ -480,16 +480,23 @@ export default class GitHub {
       // Force useWorkflow=false so Hugo sees files on disk immediately
       const mirroredOptions = {
         ...options,
-        useWorkflow: false
+        useWorkflow: false,
+        // ensure non-empty status for server validation
+        status: options.status || this.options.initialWorkflowStatus || 'draft'
       };
+      const extraParams = {
+        branch: this.mirror.branch
+      };
+      if (this.mirror.cmsLabelPrefix) {
+        extraParams.cmsLabelPrefix = this.mirror.cmsLabelPrefix;
+      }
       await this.mirrorRequest({
         action: 'persistEntry',
         params: {
-          branch: this.mirror.branch,
+          ...extraParams,
           dataFiles: entry.dataFiles,
           assets,
-          options: mirroredOptions,
-          cmsLabelPrefix: this.mirror.cmsLabelPrefix
+          options: mirroredOptions
         }
       });
       this.mirrorNotificationCallback?.('Local preview updated', 'success');
