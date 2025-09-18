@@ -283,22 +283,25 @@ export class PreviewPane extends React.Component {
       <PreviewPaneFrame id="preview-pane" head={styleEls} />;
     }
 
-    // For local_backend, render the real Hugo page via iframe for any folder-based collection
+    // For local preview mirror (or legacy local_backend), render the real Hugo page via iframe
     try {
-      const isLocalBackend = !!(config && config.local_backend);
-      if (isLocalBackend) {
+      const isMirrorPreview = !!(config && (config.local_preview_mirror || config.local_backend));
+      if (isMirrorPreview) {
         const folder = (collection.get('folder') || '').toString();
         // section derived from folder, e.g., content/tech-stack -> tech-stack
         const section = folder.replace(/^\/?content\/?/i, '').replace(/^\/+|\/+$/g, '');
         const slug = ((entry.get('slug') || '').toString()).replace(/^\/+|\/+$/g, '');
         const needsSection = section && !slug.startsWith(`${section}/`);
         const path = needsSection ? `${section}/${slug}` : slug;
-        const base = (typeof window !== 'undefined' && window.location && window.location.origin) || '';
+        const base =
+          (config && (config.get && (config.get('display_url') || config.get('site_url')))) ||
+          (config && ((config.display_url) || (config.site_url))) ||
+          ((typeof window !== 'undefined' && window.location && window.location.origin) || '');
         let previewUrl = `${base}/${path.replace(/^\/+|\/+$|\/\/+$/g, '')}/`;
         // Strip trailing '/index' or '/index/' from nested index.md URLs
         previewUrl = previewUrl.replace(/\/(index\/?)(?=$|\?)/i, '/');
         if (typeof window !== 'undefined' && window.console) {
-          try { console.log('[local_backend preview] url:', { section, slug, path, previewUrl }); } catch (_) {}
+          try { console.log('[local_preview_mirror preview] url:', { section, slug, path, previewUrl }); } catch (_) {}
         }
         return (
           <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
