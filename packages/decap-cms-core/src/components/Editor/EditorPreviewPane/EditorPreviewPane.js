@@ -298,8 +298,8 @@ export class PreviewPane extends React.Component {
           (config && ((config.display_url) || (config.site_url))) ||
           ((typeof window !== 'undefined' && window.location && window.location.origin) || '');
         let previewUrl = `${base}/${path.replace(/^\/+|\/+$|\/\/+$/g, '')}/`;
-        // Strip trailing '/index' or '/index/' from nested index.md URLs
-        previewUrl = previewUrl.replace(/\/(index\/?)(?=$|\?)/i, '/');
+        // Strip trailing '/index' or '/_index' (with optional trailing slash)
+        previewUrl = previewUrl.replace(/\/(_?index\/?)(?=$|\?)/i, '/');
         if (typeof window !== 'undefined' && window.console) {
           try { console.log('[local_preview_mirror preview] url:', { section, slug, path, previewUrl }); } catch (_) {}
         }
