@@ -292,7 +292,18 @@ export class PreviewPane extends React.Component {
         const section = folder.replace(/^\/?content\/?/i, '').replace(/^\/+|\/+$/g, '');
         const slug = ((entry.get('slug') || '').toString()).replace(/^\/+|\/+$/g, '');
         const needsSection = section && !slug.startsWith(`${section}/`);
-        const path = needsSection ? `${section}/${slug}` : slug;
+        const rawPath = needsSection ? `${section}/${slug}` : slug;
+        // Remove double quotation marks (straight/curly) and convert en/em dashes to hyphen in each segment
+        const path = rawPath
+          .split('/')
+          .map(seg => {
+            let s = seg;
+            try { s = decodeURIComponent(s); } catch (_) {}
+            s = s.replace(/["“”]/g, '');
+            s = s.replace(/[–—]/g, '-');
+            return s;
+          })
+          .join('/');
         const base =
           (config && (config.get && (config.get('display_url') || config.get('site_url')))) ||
           (config && ((config.display_url) || (config.site_url))) ||

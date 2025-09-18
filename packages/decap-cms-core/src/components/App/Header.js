@@ -196,6 +196,12 @@ class Header extends React.Component {
         <AppHeaderContent>
           <nav>
             <AppHeaderNavList>
+              <li>
+                <AppHeaderNavLink to="/admin" activeClassName="header-link-active">
+                  <Icon type="home" />
+                  Admin
+                </AppHeaderNavLink>
+              </li>
               {shouldShowLogo && (
                 <AppHeaderLogo>
                   <img src={logo?.src || logoUrl} alt="Logo" />
