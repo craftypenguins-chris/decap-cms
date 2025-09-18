@@ -190,7 +190,7 @@ class Header extends React.Component {
       .toList();
 
     const shouldShowLogo = logo?.show_in_header && logo?.src;
-    const adminHref = `${(typeof window !== 'undefined' && window.location && window.location.origin) || ''}/admin`;
+    const adminHref = "/admin";
 
     return (
       <AppHeader>
