@@ -47,12 +47,16 @@ const defaultState: {
   field?: EntryField;
   value?: string | string[];
   replaceIndex?: number | boolean;
+  source?: 'repo' | 'local_preview';
+  currentFolderPath?: string[];
 } = {
   isVisible: false,
   showMediaButton: true,
   controlMedia: Map(),
   displayURLs: Map(),
   config: Map(),
+  source: 'repo',
+  currentFolderPath: [],
 };
 
 function mediaLibrary(state = Map(defaultState), action: MediaLibraryAction) {

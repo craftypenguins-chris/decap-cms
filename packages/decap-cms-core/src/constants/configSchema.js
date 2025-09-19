@@ -164,6 +164,7 @@ function getConfigSchema() {
             type: 'array',
             items: { type: 'string' },
           },
+          local_preview_media_folder: { type: 'string', examples: ['static/images'] },
         },
         additionalProperties: false,
       },

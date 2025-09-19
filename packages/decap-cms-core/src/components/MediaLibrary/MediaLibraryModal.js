@@ -92,6 +92,12 @@ function MediaLibraryModal({
   loadDisplayURL,
   displayURLs,
   t,
+  source,
+  onChangeSource,
+  showLocalPreview,
+  breadcrumbs,
+  onNavigateUp,
+  onNavigateBreadcrumb,
 }) {
   const filteredFiles = forImage ? handleFilter(files) : files;
   const queriedFiles = !dynamicSearch && query ? handleQuery(query, filteredFiles) : filteredFiles;
@@ -130,6 +136,12 @@ function MediaLibraryModal({
         isPersisting={isPersisting}
         isDeleting={isDeleting}
         selectedFile={selectedFile}
+        source={source}
+        onChangeSource={onChangeSource}
+        showLocalPreview={showLocalPreview}
+        breadcrumbs={breadcrumbs}
+        onNavigateUp={onNavigateUp}
+        onNavigateBreadcrumb={onNavigateBreadcrumb}
       />
       {!shouldShowEmptyMessage ? null : (
         <EmptyMessage content={emptyMessage} isPrivate={privateUpload} />
@@ -195,6 +207,12 @@ MediaLibraryModal.propTypes = {
   loadDisplayURL: PropTypes.func.isRequired,
   t: PropTypes.func.isRequired,
   displayURLs: PropTypes.instanceOf(Map).isRequired,
+  source: PropTypes.oneOf(['repo', 'local_preview']),
+  onChangeSource: PropTypes.func,
+  showLocalPreview: PropTypes.bool,
+  breadcrumbs: PropTypes.arrayOf(PropTypes.string),
+  onNavigateUp: PropTypes.func,
+  onNavigateBreadcrumb: PropTypes.func,
 };
 
 export default translate()(MediaLibraryModal);

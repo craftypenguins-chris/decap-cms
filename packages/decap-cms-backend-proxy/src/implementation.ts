@@ -29,9 +29,17 @@ type MediaFile = {
   encoding: string;
   name: string;
   path: string;
+  type?: string; // 'directory' for folder entries
 };
 
-function deserializeMediaFile({ id, content, encoding, path, name }: MediaFile) {
+function deserializeMediaFile({ id, content, encoding, path, name, type }: MediaFile) {
+  if (type === 'directory') {
+    // Represent a directory as a non-viewable item with type 'DIR'
+    const blob = new Blob();
+    const file = blobToFileObj(name, blob);
+    const url = '';
+    return { id, name, path, file, size: 0, url, displayURL: url, type: 'DIR' } as any;
+  }
   let byteArray = new Uint8Array(0);
   if (encoding !== 'base64') {
     console.error(`Unsupported encoding '${encoding}' for file '${path}'`);
@@ -220,10 +228,10 @@ export default class ProxyBackend implements Implementation {
     });
   }
 
-  async getMedia(mediaFolder = this.mediaFolder) {
+  async getMedia(mediaFolder = this.mediaFolder, subpath?: string) {
     const files: MediaFile[] = await this.request({
       action: 'getMedia',
-      params: { branch: this.branch, mediaFolder },
+      params: { branch: this.branch, mediaFolder, subpath },
     });
 
     return files.map(deserializeMediaFile);

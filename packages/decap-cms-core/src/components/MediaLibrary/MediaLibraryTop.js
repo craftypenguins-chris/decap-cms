@@ -45,6 +45,12 @@ function MediaLibraryTop({
   isPersisting,
   isDeleting,
   selectedFile,
+  source,
+  onChangeSource,
+  showLocalPreview,
+  breadcrumbs,
+  onNavigateUp,
+  onNavigateBreadcrumb,
 }) {
   const shouldShowButtonLoader = isPersisting || isDeleting;
   const uploadEnabled = !shouldShowButtonLoader;
@@ -70,6 +76,12 @@ function MediaLibraryTop({
               : t('mediaLibrary.mediaLibraryModal.mediaAssets')
           }`}
           isPrivate={privateUpload}
+          source={source}
+          onChangeSource={onChangeSource}
+          showLocalPreview={showLocalPreview}
+          breadcrumbs={breadcrumbs}
+          onNavigateUp={onNavigateUp}
+          onNavigateBreadcrumb={onNavigateBreadcrumb}
         />
         <ButtonsContainer>
           <CopyToClipBoardButton
@@ -138,6 +150,12 @@ MediaLibraryTop.propTypes = {
     }),
     PropTypes.shape({}),
   ]),
+  source: PropTypes.oneOf(['repo', 'local_preview']),
+  onChangeSource: PropTypes.func,
+  showLocalPreview: PropTypes.bool,
+  breadcrumbs: PropTypes.arrayOf(PropTypes.string),
+  onNavigateUp: PropTypes.func,
+  onNavigateBreadcrumb: PropTypes.func,
 };
 
 export default MediaLibraryTop;

@@ -75,13 +75,15 @@ class MediaLibrary extends React.Component {
     selectedFile: {},
     query: '',
     isPersisted: false,
+    source: 'repo',
+    currentFolderPath: [],
   };
 
   componentDidMount() {
     // Manually validate PropTypes - React 19 breaking change
     PropTypes.checkPropTypes(MediaLibrary.propTypes, this.props, 'prop', 'MediaLibrary');
 
-    this.props.loadMedia();
+    this.props.loadMedia({ source: this.state.source, subpath: this.state.currentFolderPath.join('/') });
   }
 
   UNSAFE_componentWillReceiveProps(nextProps) {
@@ -139,20 +141,21 @@ class MediaLibrary extends React.Component {
   toTableData = files => {
     const tableData =
       files &&
-      files.map(({ key, name, id, size, path, queryOrder, displayURL, draft }) => {
-        const ext = fileExtension(name).toLowerCase();
+      files.map(({ key, name, id, size, path, queryOrder, displayURL, draft, type }) => {
+        const isDir = type === 'DIR' || name.endsWith('/');
+        const ext = isDir ? '' : fileExtension(name).toLowerCase();
         return {
           key,
           id,
           name,
           path,
-          type: ext.toUpperCase(),
+          type: isDir ? 'DIR' : ext.toUpperCase(),
           size,
           queryOrder,
           displayURL,
           draft,
-          isImage: IMAGE_EXTENSIONS.includes(ext),
-          isViewableImage: IMAGE_EXTENSIONS_VIEWABLE.includes(ext),
+          isImage: !isDir && IMAGE_EXTENSIONS.includes(ext),
+          isViewableImage: !isDir && IMAGE_EXTENSIONS_VIEWABLE.includes(ext),
         };
       });
 
@@ -166,6 +169,35 @@ class MediaLibrary extends React.Component {
     return orderBy(tableData, fieldNames, directions);
   };
 
+  handleChangeSource = src => {
+    if (src === this.state.source) return;
+    this.setState({ source: src, selectedFile: {}, currentFolderPath: [] }, () => {
+      this.props.loadMedia({ source: this.state.source, subpath: '' });
+    });
+  };
+
+  handleNavigateFolder = name => {
+    this.setState(
+      prev => ({ currentFolderPath: [...prev.currentFolderPath, name], selectedFile: {} }),
+      () => this.props.loadMedia({ source: this.state.source, subpath: this.state.currentFolderPath.join('/') }),
+    );
+  };
+
+  handleNavigateBreadcrumb = index => {
+    this.setState(
+      prev => ({ currentFolderPath: prev.currentFolderPath.slice(0, index + 1), selectedFile: {} }),
+      () => this.props.loadMedia({ source: this.state.source, subpath: this.state.currentFolderPath.join('/') }),
+    );
+  };
+
+  handleNavigateUp = () => {
+    if (this.state.currentFolderPath.length === 0) return;
+    this.setState(
+      prev => ({ currentFolderPath: prev.currentFolderPath.slice(0, -1), selectedFile: {} }),
+      () => this.props.loadMedia({ source: this.state.source, subpath: this.state.currentFolderPath.join('/') }),
+    );
+  };
+
   handleClose = () => {
     this.props.closeMediaLibrary();
   };
@@ -174,6 +206,11 @@ class MediaLibrary extends React.Component {
    * Toggle asset selection on click.
    */
   handleAssetClick = asset => {
+    // Navigate into directories when clicked in Local Preview source
+    if (this.state.source === 'local_preview' && asset.type === 'DIR') {
+      this.handleNavigateFolder(asset.name);
+      return;
+    }
     const selectedFile = this.state.selectedFile.key === asset.key ? {} : asset;
     this.setState({ selectedFile });
   };
@@ -285,7 +322,7 @@ class MediaLibrary extends React.Component {
   handleSearchKeyDown = async event => {
     const { dynamicSearch, loadMedia, privateUpload } = this.props;
     if (event.key === 'Enter' && dynamicSearch) {
-      await loadMedia({ query: this.state.query, privateUpload });
+      await loadMedia({ query: this.state.query, privateUpload, source: this.state.source, subpath: this.state.currentFolderPath.join('/') });
       this.scrollToTop();
     }
   };
@@ -369,6 +406,12 @@ class MediaLibrary extends React.Component {
         displayURLs={displayURLs}
         loadDisplayURL={this.loadDisplayURL}
         t={t}
+        source={this.state.source}
+        onChangeSource={this.handleChangeSource}
+        showLocalPreview={Boolean(this.props.config && this.props.config.getIn && this.props.config.getIn(['local_preview_mirror', 'local_preview_media_folder']))}
+        breadcrumbs={this.state.currentFolderPath}
+        onNavigateUp={this.handleNavigateUp}
+        onNavigateBreadcrumb={this.handleNavigateBreadcrumb}
       />
     );
   }

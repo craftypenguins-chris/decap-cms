@@ -1,5 +1,7 @@
-import path from 'path';
-import { promises as fs } from 'fs';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+declare const require: any;
+const path = require('path');
+const fs = require('fs').promises;
 
 async function listFiles(dir: string, extension: string, depth: number): Promise<string[]> {
   if (depth <= 0) {
@@ -9,7 +11,7 @@ async function listFiles(dir: string, extension: string, depth: number): Promise
   try {
     const dirents = await fs.readdir(dir, { withFileTypes: true });
     const files = await Promise.all(
-      dirents.map(dirent => {
+      dirents.map((dirent: any) => {
         const res = path.join(dir, dirent.name);
         return dirent.isDirectory()
           ? listFiles(res, extension, depth - 1)
@@ -28,11 +30,30 @@ export async function listRepoFiles(
   extension: string,
   depth: number,
 ) {
-  const files = await listFiles(path.join(repoPath, folder), extension, depth);
+  const abs = path.join(repoPath, folder);
+  const files = await listFiles(abs, extension, depth);
   return files.map(f => f.slice(repoPath.length + 1));
 }
 
-export async function writeFile(filePath: string, content: Buffer | string) {
+// List one-level children (files and directories) under a target folder relative to repoPath
+export async function listDirChildren(
+  repoPath: string,
+  targetRelativeFolder: string,
+): Promise<{ type: 'file' | 'directory'; path: string; name: string }[]> {
+  const abs = path.join(repoPath, targetRelativeFolder);
+  try {
+    const dirents = await fs.readdir(abs, { withFileTypes: true });
+    return dirents.map((dirent: any) => {
+      const absChild = path.join(abs, dirent.name);
+      const relPath = absChild.slice(repoPath.length + 1);
+      return { type: dirent.isDirectory() ? 'directory' : 'file', path: relPath, name: dirent.name };
+    });
+  } catch (e) {
+    return [];
+  }
+}
+
+export async function writeFile(filePath: string, content: any) {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, content);
 }
@@ -60,6 +81,6 @@ export async function move(from: string, to: string) {
 export async function getUpdateDate(repoPath: string, filePath: string) {
   return fs
     .stat(path.join(repoPath, filePath))
-    .then(stat => stat.mtime)
+    .then((stat: any) => stat.mtime)
     .catch(() => new Date());
 }

@@ -16,7 +16,7 @@ import { Mutex, withTimeout } from 'async-mutex';
 
 import { defaultSchema, joi } from '../joi';
 import { pathTraversal } from '../joi/customValidators';
-import { listRepoFiles, writeFile, move, deleteFile, getUpdateDate } from '../utils/fs';
+import { listRepoFiles, writeFile, move, deleteFile, getUpdateDate, listDirChildren } from '../utils/fs';
 import { entriesFromFiles, readMediaFile } from '../utils/entries';
 
 import type {
@@ -366,13 +366,22 @@ export function localGitMiddleware({ repoPath, logger }: GitOptions) {
           break;
         }
         case 'getMedia': {
-          const { mediaFolder } = body.params as GetMediaParams;
+          const { mediaFolder, subpath = '' } = body.params as GetMediaParams & { subpath?: string };
           const mediaFiles = await runOnBranch(git, branch, async () => {
-            const files = await listRepoFiles(repoPath, mediaFolder, '', 1);
-            const serializedFiles = await Promise.all(
-              files.map(file => readMediaFile(repoPath, file)),
-            );
-            return serializedFiles;
+            const targetRelative = path.join(mediaFolder, subpath).replace(/^\\+|\/+$/g, '');
+            const children = await listDirChildren(repoPath, targetRelative);
+            const files = children.filter(c => c.type === 'file').map(c => c.path);
+            const dirs = children.filter(c => c.type === 'directory');
+            const serializedFiles = await Promise.all(files.map(file => readMediaFile(repoPath, file)));
+            const dirEntries = dirs.map(d => ({
+              id: d.path,
+              name: d.name,
+              path: d.path,
+              type: 'directory',
+              content: '',
+              encoding: 'base64',
+            }));
+            return [...dirEntries, ...serializedFiles];
           });
           res.json(mediaFiles);
           break;

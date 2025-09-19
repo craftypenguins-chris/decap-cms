@@ -397,6 +397,7 @@ export interface CmsLocalBackend {
 export interface CmsLocalPreviewMirror {
   url?: string;
   allowed_hosts?: string[];
+  local_preview_media_folder?: string;
 }
 
 export interface CmsConfig {

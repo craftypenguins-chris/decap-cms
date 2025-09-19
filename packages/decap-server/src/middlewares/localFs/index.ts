@@ -2,7 +2,7 @@ import path from 'path';
 
 import { defaultSchema, joi } from '../joi';
 import { pathTraversal } from '../joi/customValidators';
-import { listRepoFiles, deleteFile, writeFile, move } from '../utils/fs';
+import { listRepoFiles, deleteFile, writeFile, move, listDirChildren } from '../utils/fs';
 import { entriesFromFiles, readMediaFile } from '../utils/entries';
 
 import type {
@@ -90,10 +90,31 @@ export function localFsMiddleware({ repoPath, logger }: FsOptions) {
           break;
         }
         case 'getMedia': {
-          const { mediaFolder } = body.params as GetMediaParams;
-          const files = await listRepoFiles(repoPath, mediaFolder, '', 1);
-          const mediaFiles = await Promise.all(files.map(file => readMediaFile(repoPath, file)));
-          res.json(mediaFiles);
+          const { mediaFolder, subpath = '' } = body.params as GetMediaParams & { subpath?: string };
+          const root = path.join(repoPath, mediaFolder);
+          const norm = path.normalize(subpath || '').replace(/^\\+|\/+$/g, '');
+          if (norm.includes('..')) {
+            return res.status(400).json({ error: 'Invalid subpath' });
+          }
+          const target = path.join(root, norm);
+          if (!target.startsWith(root)) {
+            return res.status(400).json({ error: 'Invalid subpath' });
+          }
+          const relTarget = path.relative(repoPath, target);
+          // one-level list of directories and files
+          const children = await listDirChildren(repoPath, relTarget);
+          const files = children.filter(c => c.type === 'file').map(c => c.path);
+          const dirs = children.filter(c => c.type === 'directory');
+          const serializedFiles = await Promise.all(files.map(file => readMediaFile(repoPath, file)));
+          const dirEntries = dirs.map(d => ({
+            id: d.path,
+            name: d.name,
+            path: d.path,
+            type: 'directory',
+            content: '',
+            encoding: 'base64',
+          }));
+          res.json([...dirEntries, ...serializedFiles]);
           break;
         }
         case 'getMediaFile': {
