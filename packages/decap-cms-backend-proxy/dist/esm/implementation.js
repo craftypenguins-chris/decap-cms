@@ -13,8 +13,25 @@ function deserializeMediaFile({
   content,
   encoding,
   path,
-  name
+  name,
+  type
 }) {
+  if (type === 'directory') {
+    // Represent a directory as a non-viewable item with type 'DIR'
+    const blob = new Blob();
+    const file = blobToFileObj(name, blob);
+    const url = '';
+    return {
+      id,
+      name,
+      path,
+      file,
+      size: 0,
+      url,
+      displayURL: url,
+      type: 'DIR'
+    };
+  }
   let byteArray = new Uint8Array(0);
   if (encoding !== 'base64') {
     console.error(`Unsupported encoding '${encoding}' for file '${path}'`);
@@ -233,12 +250,13 @@ export default class ProxyBackend {
       }
     });
   }
-  async getMedia(mediaFolder = this.mediaFolder) {
+  async getMedia(mediaFolder = this.mediaFolder, subpath) {
     const files = await this.request({
       action: 'getMedia',
       params: {
         branch: this.branch,
-        mediaFolder
+        mediaFolder,
+        subpath
       }
     });
     return files.map(deserializeMediaFile);

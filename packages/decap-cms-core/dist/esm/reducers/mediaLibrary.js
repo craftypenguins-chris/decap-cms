@@ -9,7 +9,9 @@ const defaultState = {
   showMediaButton: true,
   controlMedia: Map(),
   displayURLs: Map(),
-  config: Map()
+  config: Map(),
+  source: 'repo',
+  currentFolderPath: []
 };
 function mediaLibrary(state = Map(defaultState), action) {
   switch (action.type) {

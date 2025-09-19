@@ -103,12 +103,80 @@ export function insertMedia(mediaPath, field) {
     const entry = state.entryDraft.get('entry');
     const collectionName = state.entryDraft.getIn(['entry', 'collection']);
     const collection = state.collections.get(collectionName);
-    if (Array.isArray(mediaPath)) {
-      mediaPath = mediaPath.map(path => selectMediaFilePublicPath(config, collection, path, entry, field));
-    } else {
-      mediaPath = selectMediaFilePublicPath(config, collection, mediaPath, entry, field);
+    const source = state.mediaLibrary.get('source') || 'repo';
+    async function ensureInRepo(pathOrPaths) {
+      if (source !== 'local_preview') {
+        return pathOrPaths;
+      }
+      const mirror = config.get && config.get('local_preview_mirror');
+      const mirrorUrl = mirror && mirror.get && mirror.get('url') || config.backend && (config.backend.mirror_proxy_url || config.backend.get && config.backend.get('mirror_proxy_url'));
+      const mediaFolder = config.get && config.get('media_folder') || config.media_folder;
+      if (!mirrorUrl || !mediaFolder) {
+        return pathOrPaths;
+      }
+      const backend = currentBackend(config);
+      const branch = backend.branch || 'master';
+      async function copyOne(singlePath) {
+        try {
+          const res = await fetch(mirrorUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json; charset=utf-8'
+            },
+            body: JSON.stringify({
+              action: 'getMediaFile',
+              branch,
+              params: {
+                branch,
+                path: singlePath
+              }
+            })
+          });
+          const fileJson = await res.json();
+          const encoding = fileJson.encoding;
+          let byteArray = new Uint8Array(0);
+          if (encoding === 'base64') {
+            const decoded = atob(fileJson.content);
+            byteArray = new Uint8Array(decoded.length);
+            for (let i = 0; i < decoded.length; i++) byteArray[i] = decoded.charCodeAt(i);
+          }
+          const blob = new Blob([byteArray]);
+          const file = new File([blob], fileJson.name || singlePath.split('/').pop());
+          let relativeUnderMedia = singlePath;
+          const mf = mediaFolder.replace(/^\/+|\/+$/g, '');
+          const normalized = singlePath.replace(/^\/+|\/+$/g, '');
+          if (normalized.toLowerCase().startsWith(mf.toLowerCase() + '/')) {
+            relativeUnderMedia = normalized.slice(mf.length + 1);
+          }
+          const destPath = selectMediaFilePath(config, collection, entry, relativeUnderMedia, field);
+          const assetProxy = createAssetProxy({
+            file,
+            path: destPath,
+            field
+          });
+          await backend.persistMedia(config, assetProxy);
+          return destPath;
+        } catch (e) {
+          console.error('Failed to copy Local Preview asset to repo', e);
+          return singlePath;
+        }
+      }
+      if (Array.isArray(pathOrPaths)) {
+        const mapped = await Promise.all(pathOrPaths.map(p => copyOne(p)));
+        return mapped;
+      } else {
+        return await copyOne(pathOrPaths);
+      }
     }
-    dispatch(mediaInserted(mediaPath));
+    (async () => {
+      let pathToInsert = await ensureInRepo(mediaPath);
+      if (Array.isArray(pathToInsert)) {
+        pathToInsert = pathToInsert.map(path => selectMediaFilePublicPath(config, collection, path, entry, field));
+      } else {
+        pathToInsert = selectMediaFilePublicPath(config, collection, pathToInsert, entry, field);
+      }
+      dispatch(mediaInserted(pathToInsert));
+    })();
   };
 }
 export function removeInsertedMedia(controlID) {
@@ -151,15 +219,72 @@ export function loadMedia(opts = {}) {
     }
     dispatch(mediaLoading(page));
     function loadFunction() {
-      return backend.getMedia().then(files => dispatch(mediaLoaded(files))).catch(error => {
-        console.error(error);
-        if (error.status === 404) {
-          console.log('This 404 was expected and handled appropriately.');
-          dispatch(mediaLoaded([]));
-        } else {
-          dispatch(mediaLoadFailed());
+      const source = opts.source || 'repo';
+      const subpath = opts.subpath || '';
+      // Repo source: use standard backend
+      if (source === 'repo') {
+        return backend.getMedia().then(files => dispatch(mediaLoaded(files))).catch(error => {
+          console.error(error);
+          if (error.status === 404) {
+            dispatch(mediaLoaded([]));
+          } else {
+            dispatch(mediaLoadFailed());
+          }
+        });
+      }
+      // Local Preview: use proxy backend against mirror URL with subpath
+      try {
+        const cfg = state.config;
+        const mirror = cfg.get && cfg.get('local_preview_mirror');
+        const mirrorUrl = mirror && mirror.get && mirror.get('url') || cfg.backend && (cfg.backend.mirror_proxy_url || cfg.backend.get && cfg.backend.get('mirror_proxy_url'));
+        const mediaFolder = cfg && cfg.get && cfg.get('media_folder') || cfg.media_folder;
+        if (!mirrorUrl || !mediaFolder) {
+          return dispatch(mediaLoaded([]));
         }
-      });
+        // lightweight request without instantiating a full backend class
+        const body = JSON.stringify({
+          branch: backend.branch || 'master',
+          action: 'getMedia',
+          params: {
+            branch: backend.branch || 'master',
+            mediaFolder,
+            subpath
+          }
+        });
+        return fetch(mirrorUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json; charset=utf-8'
+          },
+          body
+        }).then(r => r.json()).then(json => {
+          const files = (json || []).map(f => {
+            if (f.type === 'directory') {
+              return {
+                id: f.id,
+                name: f.name,
+                path: f.path,
+                type: 'DIR',
+                url: '',
+                displayURL: ''
+              };
+            }
+            // passthrough serialized media file as returned by decap-server
+            return {
+              id: f.id,
+              name: f.name,
+              path: f.path,
+              url: f.url,
+              displayURL: f.displayURL || f.url,
+              size: f.size
+            };
+          });
+          dispatch(mediaLoaded(files));
+        }).catch(() => dispatch(mediaLoadFailed()));
+      } catch (e) {
+        console.error(e);
+        return dispatch(mediaLoadFailed());
+      }
     }
     if (delay > 0) {
       return new Promise(resolve => {
@@ -240,9 +365,17 @@ export function persistMedia(file, opts = {}) {
       } else if (privateUpload) {
         throw new Error('The Private Upload option is only available for Asset Store Integration');
       } else {
+        // If Local Preview source is active and breadcrumbs present, preserve subfolders
+        const mediaState = state.mediaLibrary;
+        const source = mediaState.get('source') || 'repo';
+        const breadcrumbs = mediaState.get('currentFolderPath') || [];
         const entry = state.entryDraft.get('entry');
         const collection = state.collections.get(entry?.get('collection'));
-        const path = selectMediaFilePath(state.config, collection, entry, fileName, field);
+        let relativePath = fileName;
+        if (source === 'local_preview' && breadcrumbs.length > 0) {
+          relativePath = `${breadcrumbs.join('/')}/${fileName}`;
+        }
+        const path = selectMediaFilePath(state.config, collection, entry, relativePath, field);
         assetProxy = createAssetProxy({
           file,
           path,

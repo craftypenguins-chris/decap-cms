@@ -537,7 +537,17 @@ export function selectMediaFilePath(config, collection, entryMap, mediaPath, fie
     return mediaPath;
   }
   const mediaFolder = selectMediaFolder(config, collection, entryMap, field);
-  return join(mediaFolder, basename(mediaPath));
+  const normalized = trim(mediaPath, '/');
+  // If provided path already starts with mediaFolder, preserve as-is
+  if (normalized.toLowerCase().startsWith(trim(mediaFolder, '/').toLowerCase() + '/')) {
+    return normalized;
+  }
+  // If path includes subdirectories, preserve them under mediaFolder
+  if (normalized.includes('/')) {
+    return join(mediaFolder, normalized);
+  }
+  // Fallback to basename behavior
+  return join(mediaFolder, basename(normalized));
 }
 export function selectMediaFilePublicPath(config, collection, mediaPath, entryMap, field) {
   if (isAbsolutePath(mediaPath)) {
@@ -550,9 +560,17 @@ export function selectMediaFilePublicPath(config, collection, mediaPath, entryMa
     publicFolder = evaluateFolder(name, config, collection, entryMap, field);
   }
   if (isAbsolutePath(publicFolder)) {
-    return joinUrlPath(publicFolder, basename(mediaPath));
+    const normalized = trim(mediaPath, '/');
+    if (normalized.includes('/')) {
+      return joinUrlPath(publicFolder, normalized);
+    }
+    return joinUrlPath(publicFolder, basename(normalized));
   }
-  return join(publicFolder, basename(mediaPath));
+  const normalized = trim(mediaPath, '/');
+  if (normalized.includes('/')) {
+    return join(publicFolder, normalized);
+  }
+  return join(publicFolder, basename(normalized));
 }
 export function selectEditingDraft(state) {
   const entry = state.get('entry');
