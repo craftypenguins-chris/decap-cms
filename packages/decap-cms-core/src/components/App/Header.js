@@ -169,6 +169,18 @@ class Header extends React.Component {
     }
   };
 
+  handleGoToAdmin = () => {
+    try {
+      const origin = (typeof window !== 'undefined' && window.location && window.location.origin) || '';
+      const url = `${origin}/admin`;
+      // Hard navigation to the top-level admin, bypassing the in-app router
+      window.location.assign(url);
+    } catch (_) {
+      // fallback
+      window.location.href = '/admin';
+    }
+  };
+
   render() {
     const {
       user,
@@ -196,6 +208,12 @@ class Header extends React.Component {
         <AppHeaderContent>
           <nav>
             <AppHeaderNavList>
+              <li>
+                <AppHeaderButton type="button" onClick={this.handleGoToAdmin}>
+                  <Icon type="home" />
+                  Admin
+                </AppHeaderButton>
+              </li>
               {shouldShowLogo && (
                 <AppHeaderLogo>
                   <img src={logo?.src || logoUrl} alt="Logo" />
