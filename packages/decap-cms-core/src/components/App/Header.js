@@ -212,7 +212,7 @@ class Header extends React.Component {
                 <AppHeaderNavLink
                   to="/"
                   activeClassName="header-link-active"
-                  isActive={(match, location) => location.pathname.startsWith('/collections/')}
+                  isActive={(_, loc) => loc?.pathname?.startsWith('/collections/')}
                 >
                   <Icon type="page" />
                   {t('app.header.content')}
