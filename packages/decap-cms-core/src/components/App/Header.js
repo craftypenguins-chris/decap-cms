@@ -191,18 +191,11 @@ class Header extends React.Component {
 
     const shouldShowLogo = logo?.show_in_header && logo?.src;
 
-
     return (
       <AppHeader>
         <AppHeaderContent>
           <nav>
             <AppHeaderNavList>
-              <li>
-                <AppHeaderNavLink as="a" href="/admin">
-                  <Icon type="home" />
-                  Admin
-                </AppHeaderNavLink>
-              </li>
               {shouldShowLogo && (
                 <AppHeaderLogo>
                   <img src={logo?.src || logoUrl} alt="Logo" />
@@ -212,7 +205,7 @@ class Header extends React.Component {
                 <AppHeaderNavLink
                   to="/"
                   activeClassName="header-link-active"
-                  isActive={(_, loc) => loc?.pathname?.startsWith('/collections/')}
+                  isActive={(match, location) => location.pathname.startsWith('/collections/')}
                 >
                   <Icon type="page" />
                   {t('app.header.content')}
