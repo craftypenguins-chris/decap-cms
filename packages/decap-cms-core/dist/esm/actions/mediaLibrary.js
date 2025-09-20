@@ -341,13 +341,15 @@ export function loadMedia(opts = {}) {
               const blob = new Blob([byteArray.buffer]);
               const fileObj = new File([blob], f.name || 'file');
               const url = URL.createObjectURL(fileObj);
+              // Mark as non-directory so Local Preview grid includes it
               return {
                 id: f.id,
                 name: f.name,
                 path: f.path,
                 url,
                 displayURL: url,
-                size: fileObj.size
+                size: fileObj.size,
+                type: 'FILE'
               };
             } catch (e) {
               console.error('[mediaLibrary] deserialize error', f?.path, e);
