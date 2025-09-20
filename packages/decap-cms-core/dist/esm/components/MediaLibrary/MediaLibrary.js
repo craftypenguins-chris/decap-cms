@@ -440,6 +440,19 @@ class MediaLibrary extends React.Component {
       displayURLs,
       t
     } = this.props;
+
+    // Determine if Local Preview toggle should be shown from root config (supports Map or plain object)
+    let showLocalPreview = false;
+    const cfg = this.props.rootConfig;
+    try {
+      if (cfg && cfg.getIn) {
+        showLocalPreview = Boolean(cfg.getIn(['local_preview_mirror', 'local_preview_media_folder']));
+      } else if (cfg) {
+        const lpm = cfg.local_preview_mirror || cfg.get && cfg.get('local_preview_mirror');
+        const lpmf = lpm && (lpm.local_preview_media_folder || lpm.get && lpm.get('local_preview_media_folder'));
+        showLocalPreview = Boolean(lpmf);
+      }
+    } catch (_) {}
     return ___EmotionJSX(MediaLibraryModal, {
       isVisible: isVisible,
       canInsert: canInsert,
@@ -473,7 +486,7 @@ class MediaLibrary extends React.Component {
       t: t,
       source: this.state.source,
       onChangeSource: this.handleChangeSource,
-      showLocalPreview: Boolean(this.props.rootConfig && this.props.rootConfig.getIn && this.props.rootConfig.getIn(['local_preview_mirror', 'local_preview_media_folder'])),
+      showLocalPreview: showLocalPreview,
       breadcrumbs: this.state.currentFolderPath,
       onNavigateUp: this.handleNavigateUp,
       onNavigateBreadcrumb: this.handleNavigateBreadcrumb
