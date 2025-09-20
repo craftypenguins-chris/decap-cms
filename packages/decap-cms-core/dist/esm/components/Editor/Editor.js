@@ -207,7 +207,14 @@ export class Editor extends React.Component {
       createDraftDuplicateFromEntry,
       entryDraft
     } = this.props;
-    await persistEntry(collection);
+    try {
+      await persistEntry(collection);
+    } catch (e) {
+      try {
+        console.error('[editor] persist error', e);
+      } catch (_) {}
+      return; // stop on error to avoid unhandled rejections and follow-up actions
+    }
     this.deleteBackup();
     if (createNew) {
       navigateToNewEntry(collection.get('name'));
