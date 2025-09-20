@@ -149,7 +149,7 @@ function MediaLibraryModal({
       {!shouldShowEmptyMessage ? null : (
         <EmptyMessage content={emptyMessage} isPrivate={privateUpload} />
       )}
-      <div style={{ display: 'flex', gap: 16 }}>
+      <div style={{ display: 'flex', gap: 16, minHeight: 480 }}>
         {isLocalPreview ? (
           <div style={{ width: 240, minWidth: 240 }}>
             <div style={{ marginBottom: 8, fontWeight: 600 }}>Folders</div>
@@ -175,7 +175,7 @@ function MediaLibraryModal({
             </div>
           </div>
         ) : null}
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minHeight: 0 }}>
           <MediaLibraryCardGrid
             setScrollContainerRef={setScrollContainerRef}
             mediaItems={tableData}
