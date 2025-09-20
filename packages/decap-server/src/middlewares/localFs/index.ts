@@ -29,6 +29,7 @@ export function localFsMiddleware({ repoPath, logger }: FsOptions) {
   return async function (req: express.Request, res: express.Response) {
     try {
       const { body } = req;
+      try { logger.debug(`[fs] action=${body.action}`); } catch (_) {}
 
       switch (body.action) {
         case 'info': {
@@ -69,6 +70,11 @@ export function localFsMiddleware({ repoPath, logger }: FsOptions) {
             dataFiles = [entry as DataFile],
             assets,
           } = body.params as PersistEntryParams;
+          try {
+            logger.info(
+              `[fs] persistEntry dataFiles=${dataFiles.length} assets=${assets.length}`,
+            );
+          } catch (_) {}
           await Promise.all(
             dataFiles.map(dataFile => writeFile(path.join(repoPath, dataFile.path), dataFile.raw)),
           );
@@ -86,6 +92,7 @@ export function localFsMiddleware({ repoPath, logger }: FsOptions) {
               );
             });
           }
+          try { logger.debug('[fs] persistEntry complete'); } catch (_) {}
           res.json({ message: 'entry persisted' });
           break;
         }
@@ -114,22 +121,34 @@ export function localFsMiddleware({ repoPath, logger }: FsOptions) {
             content: '',
             encoding: 'base64',
           }));
+          try {
+            logger.debug(
+              `[fs] getMedia mediaFolder=${mediaFolder} subpath=${norm} dirs=${dirs.length} files=${files.length}`,
+            );
+          } catch (_) {}
           res.json([...dirEntries, ...serializedFiles]);
           break;
         }
         case 'getMediaFile': {
           const { path } = body.params as GetMediaFileParams;
+          try { logger.debug(`[fs] getMediaFile path=${path}`); } catch (_) {}
           const mediaFile = await readMediaFile(repoPath, path);
           res.json(mediaFile);
           break;
         }
         case 'persistMedia': {
           const { asset } = body.params as PersistMediaParams;
+          try {
+            logger.info(
+              `[fs] persistMedia path=${asset.path} bytes=${(asset.content && asset.content.length) || 0} encoding=${asset.encoding}`,
+            );
+          } catch (_) {}
           await writeFile(
             path.join(repoPath, asset.path),
             Buffer.from(asset.content, asset.encoding),
           );
           const file = await readMediaFile(repoPath, asset.path);
+          try { logger.debug('[fs] persistMedia complete'); } catch (_) {}
           res.json(file);
           break;
         }

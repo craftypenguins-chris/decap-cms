@@ -311,6 +311,8 @@ export function localGitMiddleware({ repoPath, logger }: GitOptions) {
             options,
           } = body.params as PersistEntryParams;
 
+          try { logger.info(`[git] persistEntry dataFiles=${dataFiles.length} assets=${assets.length} useWorkflow=${options.useWorkflow} status=${options.status}`); } catch (_) {}
+
           if (!options.useWorkflow) {
             await runOnBranch(git, branch, async () => {
               await commitEntry(git, repoPath, dataFiles, assets, options.commitMessage);
@@ -343,6 +345,7 @@ export function localGitMiddleware({ repoPath, logger }: GitOptions) {
               }
             });
           }
+          try { logger.debug('[git] persistEntry complete'); } catch (_) {}
           res.json({ message: 'entry persisted' });
           break;
         }
@@ -367,8 +370,9 @@ export function localGitMiddleware({ repoPath, logger }: GitOptions) {
         }
         case 'getMedia': {
           const { mediaFolder, subpath = '' } = body.params as GetMediaParams & { subpath?: string };
+          try { logger.debug(`[git] getMedia mediaFolder=${mediaFolder} subpath=${subpath}`); } catch (_) {}
           const mediaFiles = await runOnBranch(git, branch, async () => {
-            const targetRelative = path.join(mediaFolder, subpath).replace(/^\\+|\/+$/g, '');
+            const targetRelative = path.join(mediaFolder, subpath).replace(/^\+|\/+$/g, '');
             const children = await listDirChildren(repoPath, targetRelative);
             const files = children.filter(c => c.type === 'file').map(c => c.path);
             const dirs = children.filter(c => c.type === 'directory');
@@ -381,6 +385,7 @@ export function localGitMiddleware({ repoPath, logger }: GitOptions) {
               content: '',
               encoding: 'base64',
             }));
+            try { logger.debug(`[git] getMedia results dirs=${dirs.length} files=${files.length}`); } catch (_) {}
             return [...dirEntries, ...serializedFiles];
           });
           res.json(mediaFiles);
@@ -388,6 +393,7 @@ export function localGitMiddleware({ repoPath, logger }: GitOptions) {
         }
         case 'getMediaFile': {
           const { path } = body.params as GetMediaFileParams;
+          try { logger.debug(`[git] getMediaFile path=${path}`); } catch (_) {}
           const mediaFile = await runOnBranch(git, branch, () => {
             return readMediaFile(repoPath, path);
           });
@@ -399,6 +405,7 @@ export function localGitMiddleware({ repoPath, logger }: GitOptions) {
             asset,
             options: { commitMessage },
           } = body.params as PersistMediaParams;
+          try { logger.info(`[git] persistMedia path=${asset.path} bytes=${(asset.content && asset.content.length) || 0} encoding=${asset.encoding}`); } catch (_) {}
 
           const file = await runOnBranch(git, branch, async () => {
             await writeFile(
@@ -408,6 +415,7 @@ export function localGitMiddleware({ repoPath, logger }: GitOptions) {
             await commit(git, commitMessage);
             return readMediaFile(repoPath, asset.path);
           });
+          try { logger.debug('[git] persistMedia complete'); } catch (_) {}
           res.json(file);
           break;
         }
