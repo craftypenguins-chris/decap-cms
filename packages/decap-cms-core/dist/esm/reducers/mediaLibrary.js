@@ -235,6 +235,12 @@ export function selectMediaFiles(state, field) {
   } = state;
   const editingDraft = selectEditingDraft(state.entryDraft);
   const integration = selectIntegration(state, null, 'assetStore');
+
+  // In Local Preview source, always use the mediaLibrary files (which may include folders)
+  const source = mediaLibrary.get('source');
+  if (source === 'local_preview') {
+    return mediaLibrary.get('files') || [];
+  }
   let files;
   if (editingDraft && !integration) {
     const entryFiles = entryDraft.getIn(['entry', 'mediaFiles'], List()).toJS();

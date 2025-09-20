@@ -11,7 +11,7 @@ import { addDraftEntryMediaFile, removeDraftEntryMediaFile } from './entries';
 import { sanitizeSlug } from '../lib/urlHelper';
 import { waitUntilWithTimeout } from './waitUntil';
 import { addNotification } from './notifications';
-const MEDIA_DEBUG_VERSION = 'client-2025-09-20-01';
+const MEDIA_DEBUG_VERSION = 'client-2025-09-20-03';
 try {
   console.log('[MediaLibrary] version', MEDIA_DEBUG_VERSION);
 } catch (_) {}
@@ -112,7 +112,7 @@ export function insertMedia(mediaPath, field) {
     const entry = state.entryDraft.get('entry');
     const collectionName = state.entryDraft.getIn(['entry', 'collection']);
     const collection = state.collections.get(collectionName);
-    const source = state.mediaLibrary.get('source') || 'repo';
+    const source = state.mediaLibrary.get && state.mediaLibrary.get('source') || 'repo';
     async function ensureInRepo(pathOrPaths) {
       if (source !== 'local_preview') {
         try {
@@ -121,7 +121,7 @@ export function insertMedia(mediaPath, field) {
         return pathOrPaths;
       }
       const mirror = config.get && config.get('local_preview_mirror');
-      const mirrorUrl = mirror && mirror.get && mirror.get('url') || config.backend && (config.backend.mirror_proxy_url || config.backend.get && config.backend.get('mirror_proxy_url'));
+      const mirrorUrl = mirror && mirror.get && mirror.get('url') || config.backend && config.backend.mirror_proxy_url;
       const mediaFolder = config.get && config.get('media_folder') || config.media_folder;
       try {
         console.log('[mediaLibrary] insertMedia mirrorUrl:', mirrorUrl, 'mediaFolder:', mediaFolder);
@@ -132,8 +132,8 @@ export function insertMedia(mediaPath, field) {
         } catch (_) {}
         return pathOrPaths;
       }
-      const backend = currentBackend(config);
-      const branch = backend.branch || 'master';
+      const backendInstance = currentBackend(config);
+      const branch = backendInstance.branch || 'master';
       async function copyOne(singlePath) {
         try {
           try {
@@ -181,7 +181,7 @@ export function insertMedia(mediaPath, field) {
             path: destPath,
             field
           });
-          await backend.persistMedia(config, assetProxy);
+          await backendInstance.persistMedia(config, assetProxy);
           try {
             console.log('[mediaLibrary] insertMedia persisted to repo:', destPath);
           } catch (_) {}
@@ -285,7 +285,7 @@ export function loadMedia(opts = {}) {
       try {
         const cfg = state.config;
         const mirror = cfg.get && cfg.get('local_preview_mirror');
-        const mirrorUrl = mirror && mirror.get && mirror.get('url') || cfg.backend && (cfg.backend.mirror_proxy_url || cfg.backend.get && cfg.backend.get('mirror_proxy_url'));
+        const mirrorUrl = mirror && mirror.get && mirror.get('url') || cfg.backend && cfg.backend.mirror_proxy_url;
         const mediaFolder = cfg && cfg.get && cfg.get('media_folder') || cfg.media_folder;
         try {
           console.log('[mediaLibrary] mirrorUrl:', mirrorUrl, 'mediaFolder:', mediaFolder);
@@ -338,7 +338,7 @@ export function loadMedia(opts = {}) {
                 byteArray = new Uint8Array(decoded.length);
                 for (let i = 0; i < decoded.length; i++) byteArray[i] = decoded.charCodeAt(i);
               }
-              const blob = new Blob([byteArray]);
+              const blob = new Blob([byteArray.buffer]);
               const fileObj = new File([blob], f.name || 'file');
               const url = URL.createObjectURL(fileObj);
               return {

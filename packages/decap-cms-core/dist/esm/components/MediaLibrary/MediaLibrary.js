@@ -131,7 +131,7 @@ class MediaLibrary extends React.Component {
    */
   toTableData = files => {
     // In Local Preview, show only files in the grid (directories will be in the sidebar)
-    const showingLocalPreview = this.state.source === 'local_preview';
+    const showingLocalPreview = this.props.source === 'local_preview';
     const tableData = files && files.filter(f => !showingLocalPreview || f.type && f.type !== 'DIR').map(({
       key,
       name,
@@ -239,7 +239,7 @@ class MediaLibrary extends React.Component {
    */
   handleAssetClick = asset => {
     // Navigate into directories when clicked in Local Preview source
-    if (this.state.source === 'local_preview' && asset.type === 'DIR') {
+    if (this.props.source === 'local_preview' && asset.type === 'DIR') {
       this.handleNavigateFolder(asset.name);
       return;
     }
@@ -398,8 +398,8 @@ class MediaLibrary extends React.Component {
       await loadMedia({
         query: this.state.query,
         privateUpload,
-        source: this.state.source,
-        subpath: this.state.currentFolderPath.join('/')
+        source: this.props.source,
+        subpath: (this.props.currentFolderPath || []).join('/')
       });
       this.scrollToTop();
     }
