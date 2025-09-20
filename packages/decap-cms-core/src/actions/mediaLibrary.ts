@@ -29,7 +29,7 @@ import type { ThunkDispatch } from 'redux-thunk';
 import type AssetProxy from '../valueObjects/AssetProxy';
 import type { ImplementationMediaFile } from 'decap-cms-lib-util';
 
-const MEDIA_DEBUG_VERSION = 'client-2025-09-20-01';
+const MEDIA_DEBUG_VERSION = 'client-2025-09-20-03';
 try { console.log('[MediaLibrary] version', MEDIA_DEBUG_VERSION); } catch (_) {}
 
 export const MEDIA_LIBRARY_OPEN = 'MEDIA_LIBRARY_OPEN';
@@ -124,27 +124,27 @@ export function insertMedia(mediaPath: string | string[], field: EntryField | un
     const entry = state.entryDraft.get('entry');
     const collectionName = state.entryDraft.getIn(['entry', 'collection']);
     const collection = state.collections.get(collectionName);
-    const source = state.mediaLibrary.get('source') || 'repo';
+    const source = ((state.mediaLibrary as any).get && (state.mediaLibrary as any).get('source')) || 'repo';
     async function ensureInRepo(pathOrPaths: string | string[]) {
       if (source !== 'local_preview') {
         try { console.log('[mediaLibrary] insertMedia source=repo; skipping mirror copy'); } catch (_) {}
         return pathOrPaths;
       }
-      const mirror = config.get && config.get('local_preview_mirror');
-      const mirrorUrl = (mirror && mirror.get && mirror.get('url')) || (config.backend && (config.backend.mirror_proxy_url || (config.backend.get && config.backend.get('mirror_proxy_url'))));
-      const mediaFolder = (config.get && config.get('media_folder')) || (config as any).media_folder;
+      const mirror = (config as any).get && (config as any).get('local_preview_mirror');
+      const mirrorUrl = (mirror && mirror.get && mirror.get('url')) || (((config as any).backend && (config as any).backend.mirror_proxy_url));
+      const mediaFolder = (((config as any).get && (config as any).get('media_folder')) || (config as any).media_folder) as string;
       try { console.log('[mediaLibrary] insertMedia mirrorUrl:', mirrorUrl, 'mediaFolder:', mediaFolder); } catch (_) {}
       if (!mirrorUrl || !mediaFolder) {
         try { console.warn('[mediaLibrary] insertMedia missing mirrorUrl/mediaFolder; not copying'); } catch (_) {}
         return pathOrPaths;
       }
-      const backend = currentBackend(config as any);
-      const branch = (backend as any).branch || 'master';
+      const backendInstance = currentBackend(config as any);
+      const branch = (backendInstance as any).branch || 'master';
 
       async function copyOne(singlePath: string) {
         try {
           try { console.log('[mediaLibrary] insertMedia copyOne from mirror path:', singlePath); } catch (_) {}
-          const res = await fetch(mirrorUrl, {
+          const res = await fetch(mirrorUrl as string, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json; charset=utf-8' },
             body: JSON.stringify({ action: 'getMediaFile', branch, params: { branch, path: singlePath } }),
@@ -158,7 +158,7 @@ export function insertMedia(mediaPath: string | string[], field: EntryField | un
             byteArray = new Uint8Array(decoded.length);
             for (let i = 0; i < decoded.length; i++) byteArray[i] = decoded.charCodeAt(i);
           }
-          const blob = new Blob([byteArray]);
+          const blob = new Blob([byteArray as unknown as BlobPart]);
           const file = new File([blob], fileJson.name || singlePath.split('/').pop());
           let relativeUnderMedia = singlePath;
           const mf = (mediaFolder as string).replace(/^\/+|\/+$/g, '');
@@ -169,7 +169,7 @@ export function insertMedia(mediaPath: string | string[], field: EntryField | un
           const destPath = selectMediaFilePath(config as any, collection, entry, relativeUnderMedia, field);
           try { console.log('[mediaLibrary] insertMedia destPath:', destPath); } catch (_) {}
           const assetProxy = createAssetProxy({ file, path: destPath, field });
-          await backend.persistMedia(config as any, assetProxy);
+          await backendInstance.persistMedia(config as any, assetProxy);
           try { console.log('[mediaLibrary] insertMedia persisted to repo:', destPath); } catch (_) {}
           return destPath;
         } catch (e) {
@@ -253,21 +253,21 @@ export function loadMedia(
           });
       }
       try {
-        const cfg = state.config;
+        const cfg: any = state.config as any;
         const mirror = cfg.get && cfg.get('local_preview_mirror');
-        const mirrorUrl = (mirror && mirror.get && mirror.get('url')) || (cfg.backend && (cfg.backend.mirror_proxy_url || cfg.backend.get && cfg.backend.get('mirror_proxy_url')));
-        const mediaFolder = (cfg && (cfg.get && cfg.get('media_folder'))) || cfg.media_folder;
+        const mirrorUrl = (mirror && mirror.get && mirror.get('url')) || (cfg.backend && cfg.backend.mirror_proxy_url);
+        const mediaFolder = ((cfg && (cfg.get && cfg.get('media_folder'))) || cfg.media_folder) as string;
         try { console.log('[mediaLibrary] mirrorUrl:', mirrorUrl, 'mediaFolder:', mediaFolder); } catch (_) {}
         if (!mirrorUrl || !mediaFolder) {
           return dispatch(mediaLoaded([]));
         }
         const body = JSON.stringify({
-          branch: backend.branch || 'master',
+          branch: (backend as any).branch || 'master',
           action: 'getMedia',
-          params: { branch: backend.branch || 'master', mediaFolder, subpath },
+          params: { branch: (backend as any).branch || 'master', mediaFolder, subpath },
         });
         try { console.log('[mediaLibrary] fetch getMedia body:', body); } catch (_) {}
-        return fetch(mirrorUrl, {
+        return fetch(mirrorUrl as string, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json; charset=utf-8' },
           body,
@@ -287,7 +287,7 @@ export function loadMedia(
                   byteArray = new Uint8Array(decoded.length);
                   for (let i = 0; i < decoded.length; i++) byteArray[i] = decoded.charCodeAt(i);
                 }
-                const blob = new Blob([byteArray]);
+                const blob = new Blob([byteArray.buffer]);
                 const fileObj = new File([blob], f.name || 'file');
                 const url = URL.createObjectURL(fileObj);
                 return { id: f.id, name: f.name, path: f.path, url, displayURL: url, size: fileObj.size } as unknown as ImplementationMediaFile;

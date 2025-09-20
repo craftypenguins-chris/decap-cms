@@ -692,6 +692,8 @@ export type MediaLibrary = StaticallyTypedRecord<{
   files: MediaFile[];
   displayURLs: StaticallyTypedRecord<DisplayURLsObject> & DisplayURLsObject;
   isLoading: boolean;
+  source?: 'repo' | 'local_preview';
+  currentFolderPath?: string[];
 }>;
 
 export type Hook = string | boolean;
