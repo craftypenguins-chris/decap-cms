@@ -8,7 +8,7 @@ import { registerMiddleware as registerLocalFs } from './middlewares/localFs';
 import { createLogger } from './logger';
 
 const app = express();
-const port = process.env.PORT || 8081;
+const port = Number(process.env.PORT) || 8081;
 const host = process.env.HOST || '0.0.0.0';
 const level = process.env.LOG_LEVEL || 'info';
 
