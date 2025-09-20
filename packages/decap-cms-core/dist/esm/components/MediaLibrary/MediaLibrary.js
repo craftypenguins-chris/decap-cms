@@ -163,6 +163,9 @@ class MediaLibrary extends React.Component {
   };
   handleChangeSource = src => {
     if (src === this.state.source) return;
+    try {
+      console.log('[mediaLibrary.UI] change source ->', src);
+    } catch (_) {}
     this.setState({
       source: src,
       selectedFile: {},
@@ -175,6 +178,9 @@ class MediaLibrary extends React.Component {
     });
   };
   handleNavigateFolder = name => {
+    try {
+      console.log('[mediaLibrary.UI] navigate folder ->', name);
+    } catch (_) {}
     this.setState(prev => ({
       currentFolderPath: [...prev.currentFolderPath, name],
       selectedFile: {}
@@ -184,6 +190,9 @@ class MediaLibrary extends React.Component {
     }));
   };
   handleNavigateBreadcrumb = index => {
+    try {
+      console.log('[mediaLibrary.UI] breadcrumb click index ->', index);
+    } catch (_) {}
     this.setState(prev => ({
       currentFolderPath: prev.currentFolderPath.slice(0, index + 1),
       selectedFile: {}
@@ -194,6 +203,9 @@ class MediaLibrary extends React.Component {
   };
   handleNavigateUp = () => {
     if (this.state.currentFolderPath.length === 0) return;
+    try {
+      console.log('[mediaLibrary.UI] navigate up');
+    } catch (_) {}
     this.setState(prev => ({
       currentFolderPath: prev.currentFolderPath.slice(0, -1),
       selectedFile: {}
@@ -461,7 +473,7 @@ class MediaLibrary extends React.Component {
       t: t,
       source: this.state.source,
       onChangeSource: this.handleChangeSource,
-      showLocalPreview: Boolean(this.props.config && this.props.config.getIn && this.props.config.getIn(['local_preview_mirror', 'local_preview_media_folder'])),
+      showLocalPreview: Boolean(this.props.rootConfig && this.props.rootConfig.getIn && this.props.rootConfig.getIn(['local_preview_mirror', 'local_preview_media_folder'])),
       breadcrumbs: this.state.currentFolderPath,
       onNavigateUp: this.handleNavigateUp,
       onNavigateBreadcrumb: this.handleNavigateBreadcrumb
@@ -487,6 +499,7 @@ function mapStateToProps(state) {
     isDeleting: mediaLibrary.get('isDeleting'),
     privateUpload: mediaLibrary.get('privateUpload'),
     config: mediaLibrary.get('config'),
+    rootConfig: state.config,
     page: mediaLibrary.get('page'),
     hasNextPage: mediaLibrary.get('hasNextPage'),
     isPaginating: mediaLibrary.get('isPaginating'),
