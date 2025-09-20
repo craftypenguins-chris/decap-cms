@@ -27,7 +27,7 @@ const cardOutsideWidth = `300px`;
 
 const StyledModal = styled(Modal)`
   display: grid;
-  grid-template-rows: 120px auto;
+  grid-template-rows: max-content auto;
   width: calc(${cardOutsideWidth} + 20px);
   background-color: ${props => props.isPrivate && colors.grayDark};
 

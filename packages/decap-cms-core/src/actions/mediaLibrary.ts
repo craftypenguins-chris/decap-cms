@@ -287,8 +287,21 @@ export function loadMedia(
                   byteArray = new Uint8Array(decoded.length);
                   for (let i = 0; i < decoded.length; i++) byteArray[i] = decoded.charCodeAt(i);
                 }
-                const blob = new Blob([byteArray.buffer]);
-                const fileObj = new File([blob], f.name || 'file');
+                const name: string = f.name || 'file';
+                const ext = (name.split('.').pop() || '').toLowerCase();
+                // Best-effort mime detection for previews
+                const mime =
+                  ext === 'svg' ? 'image/svg+xml' :
+                  ext === 'png' ? 'image/png' :
+                  ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' :
+                  ext === 'webp' ? 'image/webp' :
+                  ext === 'gif' ? 'image/gif' :
+                  ext === 'bmp' ? 'image/bmp' :
+                  ext === 'tiff' || ext === 'tif' ? 'image/tiff' :
+                  ext === 'avif' ? 'image/avif' :
+                  '';
+                const blob = new Blob([byteArray], { type: mime });
+                const fileObj = new File([blob], name, { type: mime });
                 const url = URL.createObjectURL(fileObj);
                 // Mark as non-directory so Local Preview grid includes it
                 return { id: f.id, name: f.name, path: f.path, url, displayURL: url, size: fileObj.size, type: 'FILE' } as unknown as ImplementationMediaFile;
