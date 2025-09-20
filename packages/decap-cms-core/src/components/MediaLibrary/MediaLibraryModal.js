@@ -98,6 +98,9 @@ function MediaLibraryModal({
   breadcrumbs,
   onNavigateUp,
   onNavigateBreadcrumb,
+  isLocalPreview,
+  folders = [],
+  onFolderClick,
 }) {
   const filteredFiles = forImage ? handleFilter(files) : files;
   const queriedFiles = !dynamicSearch && query ? handleQuery(query, filteredFiles) : filteredFiles;
@@ -146,23 +149,52 @@ function MediaLibraryModal({
       {!shouldShowEmptyMessage ? null : (
         <EmptyMessage content={emptyMessage} isPrivate={privateUpload} />
       )}
-      <MediaLibraryCardGrid
-        setScrollContainerRef={setScrollContainerRef}
-        mediaItems={tableData}
-        isSelectedFile={file => selectedFile.key === file.key}
-        onAssetClick={handleAssetClick}
-        canLoadMore={hasNextPage}
-        onLoadMore={handleLoadMore}
-        isPaginating={isPaginating}
-        paginatingMessage={t('mediaLibrary.mediaLibraryModal.loading')}
-        cardDraftText={t('mediaLibrary.mediaLibraryCard.draft')}
-        cardWidth={cardWidth}
-        cardHeight={cardHeight}
-        cardMargin={cardMargin}
-        isPrivate={privateUpload}
-        loadDisplayURL={loadDisplayURL}
-        displayURLs={displayURLs}
-      />
+      <div style={{ display: 'flex', gap: 16 }}>
+        {isLocalPreview ? (
+          <div style={{ width: 240, minWidth: 240 }}>
+            <div style={{ marginBottom: 8, fontWeight: 600 }}>Folders</div>
+            <div style={{ marginBottom: 8 }}>
+              <button type="button" onClick={onNavigateUp}>Up</button>
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <span>/</span>
+              {breadcrumbs.map((seg, idx) => (
+                <span key={idx}>
+                  <button type="button" onClick={() => onNavigateBreadcrumb(idx)} style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer' }}>{seg}</button>
+                  {idx < breadcrumbs.length - 1 ? ' / ' : ''}
+                </span>
+              ))}
+            </div>
+            <div style={{ maxHeight: 400, overflowY: 'auto', border: '1px solid #eee', borderRadius: 4 }}>
+              {folders.map((name, i) => (
+                <div key={i}>
+                  <button type="button" onClick={() => onFolderClick(name)} style={{ width: '100%', textAlign: 'left', padding: '6px 8px', background: 'white', border: 'none', cursor: 'pointer' }}>📁 {name}</button>
+                </div>
+              ))}
+              {folders.length === 0 ? <div style={{ padding: 8, color: '#777' }}>(no folders)</div> : null}
+            </div>
+          </div>
+        ) : null}
+        <div style={{ flex: 1 }}>
+          <MediaLibraryCardGrid
+            setScrollContainerRef={setScrollContainerRef}
+            mediaItems={tableData}
+            isSelectedFile={file => selectedFile.key === file.key}
+            onAssetClick={handleAssetClick}
+            canLoadMore={hasNextPage}
+            onLoadMore={handleLoadMore}
+            isPaginating={isPaginating}
+            paginatingMessage={t('mediaLibrary.mediaLibraryModal.loading')}
+            cardDraftText={t('mediaLibrary.mediaLibraryCard.draft')}
+            cardWidth={cardWidth}
+            cardHeight={cardHeight}
+            cardMargin={cardMargin}
+            isPrivate={privateUpload}
+            loadDisplayURL={loadDisplayURL}
+            displayURLs={displayURLs}
+          />
+        </div>
+      </div>
     </StyledModal>
   );
 }
@@ -213,6 +245,9 @@ MediaLibraryModal.propTypes = {
   breadcrumbs: PropTypes.arrayOf(PropTypes.string),
   onNavigateUp: PropTypes.func,
   onNavigateBreadcrumb: PropTypes.func,
+  isLocalPreview: PropTypes.bool,
+  folders: PropTypes.arrayOf(PropTypes.string),
+  onFolderClick: PropTypes.func,
 };
 
 export default translate()(MediaLibraryModal);

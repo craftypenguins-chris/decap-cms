@@ -139,9 +139,13 @@ class MediaLibrary extends React.Component {
    * Transform file data for table display.
    */
   toTableData = files => {
+    // In Local Preview, show only files in the grid (directories will be in the sidebar)
+    const showingLocalPreview = this.state.source === 'local_preview';
     const tableData =
       files &&
-      files.map(({ key, name, id, size, path, queryOrder, displayURL, draft, type }) => {
+      files
+        .filter(f => !showingLocalPreview || (f.type && f.type !== 'DIR'))
+        .map(({ key, name, id, size, path, queryOrder, displayURL, draft, type }) => {
         const isDir = type === 'DIR' || name.endsWith('/');
         const ext = isDir ? '' : fileExtension(name).toLowerCase();
         return {
@@ -391,6 +395,9 @@ class MediaLibrary extends React.Component {
       }
     } catch (_) {}
 
+    // Derive folder list for Local Preview sidebar from original files
+    const folderItems = (files || []).filter(f => f.type === 'DIR').map(f => f.name || f.path.split('/').pop());
+
     return (
       <MediaLibraryModal
         isVisible={isVisible}
@@ -426,6 +433,9 @@ class MediaLibrary extends React.Component {
         source={this.state.source}
         onChangeSource={this.handleChangeSource}
         showLocalPreview={showLocalPreview}
+        isLocalPreview={this.state.source === 'local_preview'}
+        folders={folderItems}
+        onFolderClick={this.handleNavigateFolder}
         breadcrumbs={this.state.currentFolderPath}
         onNavigateUp={this.handleNavigateUp}
         onNavigateBreadcrumb={this.handleNavigateBreadcrumb}
