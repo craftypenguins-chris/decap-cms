@@ -1111,7 +1111,10 @@ export class Backend {
 
     const useWorkflow = selectUseWorkflow(config);
 
-    const customPath = selectCustomPath(collection, entryDraft);
+    // Normalize customPath to avoid leading slash causing double separators when
+    // backends prefix with collection folder (e.g., "content/..." + "/slug").
+    const rawCustomPath = selectCustomPath(collection, entryDraft);
+    const customPath = rawCustomPath ? rawCustomPath.replace(/^\/+/, '') : rawCustomPath;
 
     let dataFile: DataFile;
     if (newEntry) {
