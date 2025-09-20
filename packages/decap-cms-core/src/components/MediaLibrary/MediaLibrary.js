@@ -75,15 +75,14 @@ class MediaLibrary extends React.Component {
     selectedFile: {},
     query: '',
     isPersisted: false,
-    source: 'repo',
-    currentFolderPath: [],
   };
 
   componentDidMount() {
     // Manually validate PropTypes - React 19 breaking change
     PropTypes.checkPropTypes(MediaLibrary.propTypes, this.props, 'prop', 'MediaLibrary');
 
-    this.props.loadMedia({ source: this.state.source, subpath: this.state.currentFolderPath.join('/') });
+    const { source, currentFolderPath } = this.props;
+    this.props.loadMedia({ source, subpath: (currentFolderPath || []).join('/') });
   }
 
   UNSAFE_componentWillReceiveProps(nextProps) {
@@ -109,7 +108,8 @@ class MediaLibrary extends React.Component {
     const isOpening = !prevProps.isVisible && this.props.isVisible;
 
     if (isOpening && prevProps.privateUpload !== this.props.privateUpload) {
-      this.props.loadMedia({ privateUpload: this.props.privateUpload });
+      const { source, currentFolderPath } = this.props;
+      this.props.loadMedia({ privateUpload: this.props.privateUpload, source, subpath: (currentFolderPath || []).join('/') });
     }
 
     if (this.state.isPersisted) {
@@ -174,36 +174,38 @@ class MediaLibrary extends React.Component {
   };
 
   handleChangeSource = src => {
-    if (src === this.state.source) return;
+    if (src === this.props.source) return;
     try { console.log('[mediaLibrary.UI] change source ->', src); } catch (_) {}
-    this.setState({ source: src, selectedFile: {}, currentFolderPath: [] }, () => {
-      this.props.loadMedia({ source: this.state.source, subpath: '' });
-    });
+    this.setState({ selectedFile: {} });
+    this.props.setMediaLibrarySource(src);
+    this.props.setMediaLibraryBreadcrumbs([]);
+    this.props.loadMedia({ source: src, subpath: '' });
   };
 
   handleNavigateFolder = name => {
     try { console.log('[mediaLibrary.UI] navigate folder ->', name); } catch (_) {}
-    this.setState(
-      prev => ({ currentFolderPath: [...prev.currentFolderPath, name], selectedFile: {} }),
-      () => this.props.loadMedia({ source: this.state.source, subpath: this.state.currentFolderPath.join('/') }),
-    );
+    const next = [...(this.props.currentFolderPath || []), name];
+    this.setState({ selectedFile: {} });
+    this.props.setMediaLibraryBreadcrumbs(next);
+    this.props.loadMedia({ source: this.props.source, subpath: next.join('/') });
   };
 
   handleNavigateBreadcrumb = index => {
     try { console.log('[mediaLibrary.UI] breadcrumb click index ->', index); } catch (_) {}
-    this.setState(
-      prev => ({ currentFolderPath: prev.currentFolderPath.slice(0, index + 1), selectedFile: {} }),
-      () => this.props.loadMedia({ source: this.state.source, subpath: this.state.currentFolderPath.join('/') }),
-    );
+    const next = (this.props.currentFolderPath || []).slice(0, index + 1);
+    this.setState({ selectedFile: {} });
+    this.props.setMediaLibraryBreadcrumbs(next);
+    this.props.loadMedia({ source: this.props.source, subpath: next.join('/') });
   };
 
   handleNavigateUp = () => {
-    if (this.state.currentFolderPath.length === 0) return;
+    const curr = this.props.currentFolderPath || [];
+    if (curr.length === 0) return;
     try { console.log('[mediaLibrary.UI] navigate up'); } catch (_) {}
-    this.setState(
-      prev => ({ currentFolderPath: prev.currentFolderPath.slice(0, -1), selectedFile: {} }),
-      () => this.props.loadMedia({ source: this.state.source, subpath: this.state.currentFolderPath.join('/') }),
-    );
+    const next = curr.slice(0, -1);
+    this.setState({ selectedFile: {} });
+    this.props.setMediaLibraryBreadcrumbs(next);
+    this.props.loadMedia({ source: this.props.source, subpath: next.join('/') });
   };
 
   handleClose = () => {
@@ -430,13 +432,13 @@ class MediaLibrary extends React.Component {
         displayURLs={displayURLs}
         loadDisplayURL={this.loadDisplayURL}
         t={t}
-        source={this.state.source}
+        source={this.props.source}
         onChangeSource={this.handleChangeSource}
         showLocalPreview={showLocalPreview}
-        isLocalPreview={this.state.source === 'local_preview'}
+        isLocalPreview={this.props.source === 'local_preview'}
         folders={folderItems}
         onFolderClick={this.handleNavigateFolder}
-        breadcrumbs={this.state.currentFolderPath}
+        breadcrumbs={this.props.currentFolderPath}
         onNavigateUp={this.handleNavigateUp}
         onNavigateBreadcrumb={this.handleNavigateBreadcrumb}
       />
@@ -466,6 +468,8 @@ function mapStateToProps(state) {
     hasNextPage: mediaLibrary.get('hasNextPage'),
     isPaginating: mediaLibrary.get('isPaginating'),
     field,
+    source: mediaLibrary.get('source') || 'repo',
+    currentFolderPath: mediaLibrary.get('currentFolderPath') || [],
   };
   return { ...mediaLibraryProps };
 }
@@ -477,6 +481,8 @@ const mapDispatchToProps = {
   insertMedia: insertMediaAction,
   loadMediaDisplayURL: loadMediaDisplayURLAction,
   closeMediaLibrary: closeMediaLibraryAction,
+  setMediaLibrarySource: require('../../actions/mediaLibrary').setMediaLibrarySource,
+  setMediaLibraryBreadcrumbs: require('../../actions/mediaLibrary').setMediaLibraryBreadcrumbs,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(translate()(MediaLibrary));

@@ -49,6 +49,8 @@ export const MEDIA_DELETE_FAILURE = 'MEDIA_DELETE_FAILURE';
 export const MEDIA_DISPLAY_URL_REQUEST = 'MEDIA_DISPLAY_URL_REQUEST';
 export const MEDIA_DISPLAY_URL_SUCCESS = 'MEDIA_DISPLAY_URL_SUCCESS';
 export const MEDIA_DISPLAY_URL_FAILURE = 'MEDIA_DISPLAY_URL_FAILURE';
+export const MEDIA_LIBRARY_SET_SOURCE = 'MEDIA_LIBRARY_SET_SOURCE';
+export const MEDIA_LIBRARY_SET_BREADCRUMBS = 'MEDIA_LIBRARY_SET_BREADCRUMBS';
 
 export function createMediaLibrary(instance: MediaLibraryInstance) {
   const api = {
@@ -642,6 +644,14 @@ export function mediaDisplayURLFailure(key: string, err: Error) {
     type: MEDIA_DISPLAY_URL_FAILURE,
     payload: { key, err },
   } as const;
+}
+
+export function setMediaLibrarySource(source: 'repo' | 'local_preview') {
+  return { type: MEDIA_LIBRARY_SET_SOURCE, payload: { source } } as const;
+}
+
+export function setMediaLibraryBreadcrumbs(breadcrumbs: string[]) {
+  return { type: MEDIA_LIBRARY_SET_BREADCRUMBS, payload: { breadcrumbs } } as const;
 }
 
 export async function waitForMediaLibraryToLoad(

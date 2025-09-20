@@ -172,6 +172,14 @@ function mediaLibrary(state = Map(defaultState), action: MediaLibraryAction) {
       });
     }
 
+    case 'MEDIA_LIBRARY_SET_SOURCE': {
+      return state.set('source', action.payload.source);
+    }
+
+    case 'MEDIA_LIBRARY_SET_BREADCRUMBS': {
+      return state.set('currentFolderPath', action.payload.breadcrumbs);
+    }
+
     case MEDIA_LOAD_FAILURE: {
       const privateUploadChanged = state.get('privateUpload') !== action.payload.privateUpload;
       if (privateUploadChanged) {
