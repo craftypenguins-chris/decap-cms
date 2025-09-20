@@ -863,7 +863,9 @@ export class Backend {
         throw new Error('Not allowed to create new entries in this collection');
       }
       const slug = await this.generateUniqueSlug(collection, entryDraft.getIn(['entry', 'data']), config, usedSlugs, customPath);
-      const path = customPath || selectEntryPath(collection, slug);
+      let path = customPath || selectEntryPath(collection, slug);
+      // Normalize any accidental duplicate or leading slashes
+      path = String(path).replace(/\/{2,}/g, '/').replace(/^\/+/, '');
       dataFile = {
         path,
         slug,
@@ -872,13 +874,15 @@ export class Backend {
       updateAssetProxies(assetProxies, config, collection, entryDraft, path);
     } else {
       const slug = entryDraft.getIn(['entry', 'slug']);
-      const path = entryDraft.getIn(['entry', 'path']);
+      let path = entryDraft.getIn(['entry', 'path']);
+      path = String(path).replace(/\/{2,}/g, '/').replace(/^\/+/, '');
+      const normalizedNewPath = customPath ? String(customPath).replace(/\/{2,}/g, '/').replace(/^\/+/, '') : undefined;
       dataFile = {
         path,
         // for workflow entries we refresh the slug on publish
-        slug: customPath && !useWorkflow ? slugFromCustomPath(collection, customPath) : slug,
+        slug: customPath && !useWorkflow ? slugFromCustomPath(collection, normalizedNewPath) : slug,
         raw: this.entryToRaw(collection, entryDraft.get('entry')),
-        newPath: customPath === path ? undefined : customPath
+        newPath: normalizedNewPath && normalizedNewPath === path ? undefined : normalizedNewPath
       };
     }
     const {
