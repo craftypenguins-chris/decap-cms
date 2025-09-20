@@ -122,7 +122,9 @@ class MediaLibrary extends React.Component {
    * Transform file data for table display.
    */
   toTableData = files => {
-    const tableData = files && files.map(({
+    // In Local Preview, show only files in the grid (directories will be in the sidebar)
+    const showingLocalPreview = this.state.source === 'local_preview';
+    const tableData = files && files.filter(f => !showingLocalPreview || f.type && f.type !== 'DIR').map(({
       key,
       name,
       id,
@@ -453,6 +455,9 @@ class MediaLibrary extends React.Component {
         showLocalPreview = Boolean(lpmf);
       }
     } catch (_) {}
+
+    // Derive folder list for Local Preview sidebar from original files
+    const folderItems = (files || []).filter(f => f.type === 'DIR').map(f => f.name || f.path.split('/').pop());
     return ___EmotionJSX(MediaLibraryModal, {
       isVisible: isVisible,
       canInsert: canInsert,
@@ -487,6 +492,9 @@ class MediaLibrary extends React.Component {
       source: this.state.source,
       onChangeSource: this.handleChangeSource,
       showLocalPreview: showLocalPreview,
+      isLocalPreview: this.state.source === 'local_preview',
+      folders: folderItems,
+      onFolderClick: this.handleNavigateFolder,
       breadcrumbs: this.state.currentFolderPath,
       onNavigateUp: this.handleNavigateUp,
       onNavigateBreadcrumb: this.handleNavigateBreadcrumb
