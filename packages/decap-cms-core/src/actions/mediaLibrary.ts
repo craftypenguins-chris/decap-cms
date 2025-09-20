@@ -115,18 +115,22 @@ export function insertMedia(mediaPath: string | string[], field: EntryField | un
   return (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
     const state = getState();
     const config = state.config;
+    try { console.log('[mediaLibrary] insertMedia called:', mediaPath); } catch (_) {}
     const entry = state.entryDraft.get('entry');
     const collectionName = state.entryDraft.getIn(['entry', 'collection']);
     const collection = state.collections.get(collectionName);
     const source = state.mediaLibrary.get('source') || 'repo';
     async function ensureInRepo(pathOrPaths: string | string[]) {
       if (source !== 'local_preview') {
+        try { console.log('[mediaLibrary] insertMedia source=repo; skipping mirror copy'); } catch (_) {}
         return pathOrPaths;
       }
       const mirror = config.get && config.get('local_preview_mirror');
       const mirrorUrl = (mirror && mirror.get && mirror.get('url')) || (config.backend && (config.backend.mirror_proxy_url || (config.backend.get && config.backend.get('mirror_proxy_url'))));
       const mediaFolder = (config.get && config.get('media_folder')) || (config as any).media_folder;
+      try { console.log('[mediaLibrary] insertMedia mirrorUrl:', mirrorUrl, 'mediaFolder:', mediaFolder); } catch (_) {}
       if (!mirrorUrl || !mediaFolder) {
+        try { console.warn('[mediaLibrary] insertMedia missing mirrorUrl/mediaFolder; not copying'); } catch (_) {}
         return pathOrPaths;
       }
       const backend = currentBackend(config as any);
@@ -134,11 +138,13 @@ export function insertMedia(mediaPath: string | string[], field: EntryField | un
 
       async function copyOne(singlePath: string) {
         try {
+          try { console.log('[mediaLibrary] insertMedia copyOne from mirror path:', singlePath); } catch (_) {}
           const res = await fetch(mirrorUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json; charset=utf-8' },
             body: JSON.stringify({ action: 'getMediaFile', branch, params: { branch, path: singlePath } }),
           });
+          try { console.log('[mediaLibrary] insertMedia getMediaFile status:', res.status); } catch (_) {}
           const fileJson = await res.json();
           const encoding = fileJson.encoding;
           let byteArray: Uint8Array = new Uint8Array(0);
@@ -156,11 +162,13 @@ export function insertMedia(mediaPath: string | string[], field: EntryField | un
             relativeUnderMedia = normalized.slice(mf.length + 1);
           }
           const destPath = selectMediaFilePath(config as any, collection, entry, relativeUnderMedia, field);
+          try { console.log('[mediaLibrary] insertMedia destPath:', destPath); } catch (_) {}
           const assetProxy = createAssetProxy({ file, path: destPath, field });
           await backend.persistMedia(config as any, assetProxy);
+          try { console.log('[mediaLibrary] insertMedia persisted to repo:', destPath); } catch (_) {}
           return destPath;
         } catch (e) {
-          console.error('Failed to copy Local Preview asset to repo', e);
+          console.error('[mediaLibrary] insertMedia copyOne error', e);
           return singlePath;
         }
       }
@@ -182,6 +190,7 @@ export function insertMedia(mediaPath: string | string[], field: EntryField | un
       } else {
         pathToInsert = selectMediaFilePublicPath(config, collection, pathToInsert as string, entry, field);
       }
+      try { console.log('[mediaLibrary] insertMedia final public path:', pathToInsert); } catch (_) {}
       dispatch(mediaInserted(pathToInsert));
     })();
   };
@@ -196,6 +205,7 @@ export function loadMedia(
 ) {
   const { delay = 0, query = '', page = 1, privateUpload } = opts;
   return async (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => {
+    try { console.log('[mediaLibrary] loadMedia opts:', opts); } catch (_) {}
     const state = getState();
     const backend = currentBackend(state.config);
     const integration = selectIntegration(state, null, 'assetStore');
@@ -204,6 +214,7 @@ export function loadMedia(
       dispatch(mediaLoading(page));
       try {
         const files = await provider.retrieve(query, page, privateUpload);
+        try { console.log('[mediaLibrary] integration files:', files?.length); } catch (_) {}
         const mediaLoadedOpts = {
           page,
           canPaginate: true,
@@ -221,63 +232,50 @@ export function loadMedia(
     function loadFunction() {
       const source = opts.source || 'repo';
       const subpath = opts.subpath || '';
-      // Repo source: use standard backend
+      try { console.log('[mediaLibrary] loadFunction source:', source, 'subpath:', subpath); } catch (_) {}
       if (source === 'repo') {
         return backend
           .getMedia()
-          .then(files => dispatch(mediaLoaded(files)))
+          .then(files => { try { console.log('[mediaLibrary] repo files:', files?.length); } catch (_) {}; return dispatch(mediaLoaded(files)); })
           .catch((error: { status?: number }) => {
             console.error(error);
             if (error.status === 404) {
+              try { console.log('[mediaLibrary] repo media 404 -> empty'); } catch (_) {}
               dispatch(mediaLoaded([]));
             } else {
               dispatch(mediaLoadFailed());
             }
           });
       }
-      // Local Preview: use proxy backend against mirror URL with subpath
       try {
         const cfg = state.config;
         const mirror = cfg.get && cfg.get('local_preview_mirror');
         const mirrorUrl = (mirror && mirror.get && mirror.get('url')) || (cfg.backend && (cfg.backend.mirror_proxy_url || cfg.backend.get && cfg.backend.get('mirror_proxy_url')));
         const mediaFolder = (cfg && (cfg.get && cfg.get('media_folder'))) || cfg.media_folder;
+        try { console.log('[mediaLibrary] mirrorUrl:', mirrorUrl, 'mediaFolder:', mediaFolder); } catch (_) {}
         if (!mirrorUrl || !mediaFolder) {
           return dispatch(mediaLoaded([]));
         }
-        // lightweight request without instantiating a full backend class
         const body = JSON.stringify({
           branch: backend.branch || 'master',
           action: 'getMedia',
           params: { branch: backend.branch || 'master', mediaFolder, subpath },
         });
+        try { console.log('[mediaLibrary] fetch getMedia body:', body); } catch (_) {}
         return fetch(mirrorUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json; charset=utf-8' },
           body,
         })
-          .then(r => r.json())
+          .then(r => { try { console.log('[mediaLibrary] mirror status:', r.status); } catch (_) {}; return r.json(); })
           .then(json => {
             const files = (json || []).map((f: any) => {
               if (f.type === 'directory') {
-                return {
-                  id: f.id,
-                  name: f.name,
-                  path: f.path,
-                  type: 'DIR',
-                  url: '',
-                  displayURL: '',
-                } as unknown as ImplementationMediaFile;
+                return { id: f.id, name: f.name, path: f.path, type: 'DIR', url: '', displayURL: '' } as unknown as ImplementationMediaFile;
               }
-              // passthrough serialized media file as returned by decap-server
-              return {
-                id: f.id,
-                name: f.name,
-                path: f.path,
-                url: f.url,
-                displayURL: f.displayURL || f.url,
-                size: f.size,
-              } as unknown as ImplementationMediaFile;
+              return { id: f.id, name: f.name, path: f.path, url: f.url, displayURL: f.displayURL || f.url, size: f.size } as unknown as ImplementationMediaFile;
             });
+            try { console.log('[mediaLibrary] mirror files:', files?.length); } catch (_) {}
             dispatch(mediaLoaded(files));
           })
           .catch(() => dispatch(mediaLoadFailed()));
