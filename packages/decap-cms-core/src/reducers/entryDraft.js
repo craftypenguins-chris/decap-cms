@@ -209,7 +209,11 @@ export function selectCustomPath(collection, entryDraft) {
     return;
   }
   const meta = entryDraft.getIn(['entry', 'meta']);
-  const path = meta && meta.get('path');
+  let path = meta && meta.get('path');
+  if (typeof path === 'string') {
+    // Normalize user-provided path to avoid double slashes in joined result
+    path = path.replace(/^\/+/, '').replace(/\/{2,}/g, '/');
+  }
   const indexFile = get(collection.toJS(), ['meta', 'path', 'index_file']);
   const extension = selectFolderEntryExtension(collection);
   const customPath = path && join(collection.get('folder'), path, `${indexFile}.${extension}`);
