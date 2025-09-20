@@ -29,6 +29,9 @@ import type { ThunkDispatch } from 'redux-thunk';
 import type AssetProxy from '../valueObjects/AssetProxy';
 import type { ImplementationMediaFile } from 'decap-cms-lib-util';
 
+const MEDIA_DEBUG_VERSION = 'client-2025-09-20-01';
+try { console.log('[MediaLibrary] version', MEDIA_DEBUG_VERSION); } catch (_) {}
+
 export const MEDIA_LIBRARY_OPEN = 'MEDIA_LIBRARY_OPEN';
 export const MEDIA_LIBRARY_CLOSE = 'MEDIA_LIBRARY_CLOSE';
 export const MEDIA_LIBRARY_CREATE = 'MEDIA_LIBRARY_CREATE';

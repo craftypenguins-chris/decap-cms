@@ -11,9 +11,11 @@ const app = express();
 const port = Number(process.env.PORT) || 8081;
 const host = process.env.HOST || '0.0.0.0';
 const level = process.env.LOG_LEVEL || 'info';
+const SERVER_DEBUG_VERSION = 'srv-2025-09-20-01';
 
 (async () => {
   const logger = createLogger({ level });
+  try { logger.info(`[DecapServer] version ${SERVER_DEBUG_VERSION}`); } catch (_) {}
   const options = {
     logger,
   };
