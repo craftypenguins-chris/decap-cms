@@ -276,7 +276,23 @@ export function loadMedia(
               if (f.type === 'directory') {
                 return { id: f.id, name: f.name, path: f.path, type: 'DIR', url: '', displayURL: '' } as unknown as ImplementationMediaFile;
               }
-              return { id: f.id, name: f.name, path: f.path, url: f.url, displayURL: f.displayURL || f.url, size: f.size } as unknown as ImplementationMediaFile;
+              // Convert base64 content to blob URL for display
+              try {
+                const encoding = f.encoding;
+                let byteArray = new Uint8Array(0);
+                if (encoding === 'base64' && typeof f.content === 'string') {
+                  const decoded = atob(f.content);
+                  byteArray = new Uint8Array(decoded.length);
+                  for (let i = 0; i < decoded.length; i++) byteArray[i] = decoded.charCodeAt(i);
+                }
+                const blob = new Blob([byteArray]);
+                const fileObj = new File([blob], f.name || 'file');
+                const url = URL.createObjectURL(fileObj);
+                return { id: f.id, name: f.name, path: f.path, url, displayURL: url, size: fileObj.size } as unknown as ImplementationMediaFile;
+              } catch (e) {
+                console.error('[mediaLibrary] deserialize error', f?.path, e);
+                return { id: f.id, name: f.name, path: f.path, url: '', displayURL: '', size: 0 } as unknown as ImplementationMediaFile;
+              }
             });
             try { console.log('[mediaLibrary] mirror files:', files?.length); } catch (_) {}
             dispatch(mediaLoaded(files));
