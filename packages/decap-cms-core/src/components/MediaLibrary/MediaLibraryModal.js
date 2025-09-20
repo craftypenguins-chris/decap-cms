@@ -142,9 +142,9 @@ function MediaLibraryModal({
         source={source}
         onChangeSource={onChangeSource}
         showLocalPreview={showLocalPreview}
-        breadcrumbs={breadcrumbs}
-        onNavigateUp={onNavigateUp}
-        onNavigateBreadcrumb={onNavigateBreadcrumb}
+        breadcrumbs={isLocalPreview ? [] : breadcrumbs}
+        onNavigateUp={isLocalPreview ? undefined : onNavigateUp}
+        onNavigateBreadcrumb={isLocalPreview ? undefined : onNavigateBreadcrumb}
       />
       {!shouldShowEmptyMessage ? null : (
         <EmptyMessage content={emptyMessage} isPrivate={privateUpload} />
