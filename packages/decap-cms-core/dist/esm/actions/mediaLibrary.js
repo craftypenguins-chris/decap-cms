@@ -11,6 +11,10 @@ import { addDraftEntryMediaFile, removeDraftEntryMediaFile } from './entries';
 import { sanitizeSlug } from '../lib/urlHelper';
 import { waitUntilWithTimeout } from './waitUntil';
 import { addNotification } from './notifications';
+const MEDIA_DEBUG_VERSION = 'client-2025-09-20-01';
+try {
+  console.log('[MediaLibrary] version', MEDIA_DEBUG_VERSION);
+} catch (_) {}
 export const MEDIA_LIBRARY_OPEN = 'MEDIA_LIBRARY_OPEN';
 export const MEDIA_LIBRARY_CLOSE = 'MEDIA_LIBRARY_CLOSE';
 export const MEDIA_LIBRARY_CREATE = 'MEDIA_LIBRARY_CREATE';
