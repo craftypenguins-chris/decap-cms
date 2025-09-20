@@ -98,13 +98,15 @@ export function localFsMiddleware({ repoPath, logger }: FsOptions) {
         }
         case 'getMedia': {
           const { mediaFolder, subpath = '' } = body.params as GetMediaParams & { subpath?: string };
-          const root = path.join(repoPath, mediaFolder);
+          // Use absolute, normalized paths for safe comparison
+          const root = path.resolve(repoPath, mediaFolder);
           const norm = path.normalize(subpath || '').replace(/^\\+|\/+$/g, '');
           if (norm.includes('..')) {
             return res.status(400).json({ error: 'Invalid subpath' });
           }
-          const target = path.join(root, norm);
-          if (!target.startsWith(root)) {
+          const target = path.resolve(root, norm);
+          const rootWithSep = root.endsWith(path.sep) ? root : root + path.sep;
+          if (!(target === root || target.startsWith(rootWithSep))) {
             return res.status(400).json({ error: 'Invalid subpath' });
           }
           const relTarget = path.relative(repoPath, target);

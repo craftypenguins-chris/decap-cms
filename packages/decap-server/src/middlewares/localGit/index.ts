@@ -372,7 +372,14 @@ export function localGitMiddleware({ repoPath, logger }: GitOptions) {
           const { mediaFolder, subpath = '' } = body.params as GetMediaParams & { subpath?: string };
           try { logger.debug(`[git] getMedia mediaFolder=${mediaFolder} subpath=${subpath}`); } catch (_) {}
           const mediaFiles = await runOnBranch(git, branch, async () => {
-            const targetRelative = path.join(mediaFolder, subpath).replace(/^\+|\/+$/g, '');
+            const root = path.resolve(repoPath, mediaFolder);
+            const norm = path.normalize(subpath || '').replace(/^\/+|\/+$/g, '');
+            const target = path.resolve(root, norm);
+            const rootWithSep = root.endsWith(path.sep) ? root : root + path.sep;
+            if (!(target === root || target.startsWith(rootWithSep))) {
+              throw new Error('Invalid subpath');
+            }
+            const targetRelative = path.relative(repoPath, target);
             const children = await listDirChildren(repoPath, targetRelative);
             const files = children.filter(c => c.type === 'file').map(c => c.path);
             const dirs = children.filter(c => c.type === 'directory');
