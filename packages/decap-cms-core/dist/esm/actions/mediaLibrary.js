@@ -32,6 +32,8 @@ export const MEDIA_DELETE_FAILURE = 'MEDIA_DELETE_FAILURE';
 export const MEDIA_DISPLAY_URL_REQUEST = 'MEDIA_DISPLAY_URL_REQUEST';
 export const MEDIA_DISPLAY_URL_SUCCESS = 'MEDIA_DISPLAY_URL_SUCCESS';
 export const MEDIA_DISPLAY_URL_FAILURE = 'MEDIA_DISPLAY_URL_FAILURE';
+export const MEDIA_LIBRARY_SET_SOURCE = 'MEDIA_LIBRARY_SET_SOURCE';
+export const MEDIA_LIBRARY_SET_BREADCRUMBS = 'MEDIA_LIBRARY_SET_BREADCRUMBS';
 export function createMediaLibrary(instance) {
   const api = {
     show: instance.show || (() => undefined),
@@ -727,6 +729,22 @@ export function mediaDisplayURLFailure(key, err) {
     payload: {
       key,
       err
+    }
+  };
+}
+export function setMediaLibrarySource(source) {
+  return {
+    type: MEDIA_LIBRARY_SET_SOURCE,
+    payload: {
+      source
+    }
+  };
+}
+export function setMediaLibraryBreadcrumbs(breadcrumbs) {
+  return {
+    type: MEDIA_LIBRARY_SET_BREADCRUMBS,
+    payload: {
+      breadcrumbs
     }
   };
 }
