@@ -9,6 +9,7 @@ import { createLogger } from './logger';
 
 const app = express();
 const port = process.env.PORT || 8081;
+const host = process.env.HOST || '0.0.0.0';
 const level = process.env.LOG_LEVEL || 'info';
 
 (async () => {
@@ -33,7 +34,7 @@ const level = process.env.LOG_LEVEL || 'info';
     process.exit(1);
   }
 
-  return app.listen(port, () => {
-    logger.info(`Decap CMS Proxy Server listening on port ${port}`);
+  return app.listen(port, host, () => {
+    logger.info(`Decap CMS Proxy Server listening on ${host}:${port}`);
   });
 })();
