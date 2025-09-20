@@ -42,7 +42,11 @@ function deserializeMediaFile({
       byteArray[i] = decodedContent.charCodeAt(i);
     }
   }
-  const blob = new Blob([byteArray]);
+  const ext = (name.split('.').pop() || '').toLowerCase();
+  const mime = ext === 'svg' ? 'image/svg+xml' : ext === 'png' ? 'image/png' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : ext === 'webp' ? 'image/webp' : ext === 'gif' ? 'image/gif' : ext === 'bmp' ? 'image/bmp' : ext === 'tiff' || ext === 'tif' ? 'image/tiff' : ext === 'avif' ? 'image/avif' : '';
+  const blob = new Blob([byteArray], {
+    type: mime
+  });
   const file = blobToFileObj(name, blob);
   const url = URL.createObjectURL(file);
   return {
