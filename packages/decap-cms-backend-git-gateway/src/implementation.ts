@@ -48,7 +48,7 @@ type MirrorConfig = {
 };
 
 // Unique marker to verify bundle freshness for cmsLabelPrefix/status handling
-export const LOCAL_PREVIEW_MIRROR_VERSION = 'mirror-2025-09-18-01';
+export const LOCAL_PREVIEW_MIRROR_VERSION = 'mirror-2025-09-21-01';
 
 const STATUS_PAGE = 'https://www.netlifystatus.com';
 const GIT_GATEWAY_STATUS_ENDPOINT = `${STATUS_PAGE}/api/v2/components.json`;

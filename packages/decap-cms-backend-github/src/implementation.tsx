@@ -47,7 +47,7 @@ export type GitHubUser = Octokit.UsersGetAuthenticatedResponse;
 const MAX_CONCURRENT_DOWNLOADS = 10;
 
 // Unique marker to verify bundle freshness for cmsLabelPrefix/status handling
-export const LOCAL_PREVIEW_MIRROR_VERSION = 'mirror-2025-09-18-01';
+export const LOCAL_PREVIEW_MIRROR_VERSION = 'mirror-2025-09-21-01';
 
 type ApiFile = { id: string; type: string; name: string; path: string; size: number };
 
