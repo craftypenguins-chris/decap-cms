@@ -795,6 +795,8 @@ export function selectMediaFilePublicPath(
 
   const name = 'public_folder';
   let publicFolder = config[name]!;
+  // Also resolve the effective media_folder to allow stripping its prefix
+  const mediaFolder = selectMediaFolder(config, collection, entryMap, field);
 
   const customFolder = hasCustomFolder(name, collection, entryMap?.get('slug'), field);
 
@@ -803,13 +805,21 @@ export function selectMediaFilePublicPath(
   }
 
   if (isAbsolutePath(publicFolder)) {
-    const normalized = trim(mediaPath, '/');
+    let normalized = trim(mediaPath, '/');
+    const mf = trim(mediaFolder, '/');
+    if (normalized.toLowerCase().startsWith(mf.toLowerCase() + '/')) {
+      normalized = normalized.slice(mf.length + 1);
+    }
     if (normalized.includes('/')) {
       return joinUrlPath(publicFolder, normalized);
     }
     return joinUrlPath(publicFolder, basename(normalized));
   }
-  const normalized = trim(mediaPath, '/');
+  let normalized = trim(mediaPath, '/');
+  const mf = trim(mediaFolder, '/');
+  if (normalized.toLowerCase().startsWith(mf.toLowerCase() + '/')) {
+    normalized = normalized.slice(mf.length + 1);
+  }
   if (normalized.includes('/')) {
     return join(publicFolder, normalized);
   }
