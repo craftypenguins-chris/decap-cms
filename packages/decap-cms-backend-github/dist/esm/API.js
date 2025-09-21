@@ -491,7 +491,7 @@ export default class API {
     branch = this.branch,
     depth = 1
   } = {}) {
-    const folder = trim(path, '/');
+    const folder = trim(path, '/').replace(/\/{2,}/g, '/');
     try {
       const result = await this.request(`${repoURL}/git/trees/${branch}:${folder}`, {
         // GitHub API supports recursive=1 for getting the entire recursive tree
@@ -506,7 +506,7 @@ export default class API {
         type: file.type,
         id: file.sha,
         name: basename(file.path),
-        path: `${folder}/${file.path}`,
+        path: `${folder}/${file.path}`.replace(/\/{2,}/g, '/'),
         size: file.size
       }));
     } catch (err) {
@@ -700,7 +700,7 @@ export default class API {
      * through the tree.
      */
 
-    const pathArray = path.split('/');
+    const pathArray = path.replace(/\/{2,}/g, '/').replace(/^\/+/, '').split('/');
     const filename = last(pathArray);
     const directory = initial(pathArray).join('/');
     const fileDataPath = encodeURIComponent(directory);
@@ -1095,16 +1095,18 @@ export default class API {
   async updateTree(baseSha, files, branch = this.branch) {
     const toMove = [];
     const tree = files.reduce((acc, file) => {
+      const normalizedPath = trimStart(file.path, '/').replace(/\/{2,}/g, '/');
       const entry = {
-        path: trimStart(file.path, '/'),
+        path: normalizedPath,
         mode: '100644',
         type: 'blob',
         sha: file.sha
       };
       if (file.newPath) {
+        const normalizedNewPath = trimStart(file.newPath, '/').replace(/\/{2,}/g, '/');
         toMove.push({
-          from: file.path,
-          to: file.newPath,
+          from: normalizedPath,
+          to: normalizedNewPath,
           sha: file.sha
         });
       } else {
@@ -1117,8 +1119,8 @@ export default class API {
       to,
       sha
     } of toMove) {
-      const sourceDir = dirname(from);
-      const destDir = dirname(to);
+      const sourceDir = dirname(from).replace(/\/{2,}/g, '/');
+      const destDir = dirname(to).replace(/\/{2,}/g, '/');
       const files = await this.listFiles(sourceDir, {
         branch,
         depth: 100
@@ -1133,7 +1135,7 @@ export default class API {
         });
         // create in new path
         tree.push({
-          path: file.path.replace(sourceDir, destDir),
+          path: file.path.replace(sourceDir, destDir).replace(/\/{2,}/g, '/'),
           mode: '100644',
           type: 'blob',
           sha: file.path === from ? sha : file.id
