@@ -683,7 +683,7 @@ export default class API {
     path: string,
     { repoURL = this.repoURL, branch = this.branch, depth = 1 } = {},
   ): Promise<{ type: string; id: string; name: string; path: string; size: number }[]> {
-    const folder = trim(path, '/');
+    const folder = trim(path, '/').replace(/\/{2,}/g, '/');
     try {
       const result: Octokit.GitGetTreeResponse = await this.request(
         `${repoURL}/git/trees/${branch}:${folder}`,
@@ -701,7 +701,7 @@ export default class API {
             type: file.type,
             id: file.sha,
             name: basename(file.path),
-            path: `${folder}/${file.path}`,
+            path: `${folder}/${file.path}`.replace(/\/{2,}/g, '/'),
             size: file.size!,
           }))
       );
@@ -924,7 +924,7 @@ export default class API {
      * through the tree.
      */
 
-    const pathArray = path.split('/');
+    const pathArray = path.replace(/\/{2,}/g, '/').replace(/^\/+/, '').split('/');
     const filename = last(pathArray);
     const directory = initial(pathArray).join('/');
     const fileDataPath = encodeURIComponent(directory);
@@ -1396,15 +1396,17 @@ export default class API {
   ) {
     const toMove: { from: string; to: string; sha: string }[] = [];
     const tree = files.reduce((acc, file) => {
+      const normalizedPath = trimStart(file.path, '/').replace(/\/{2,}/g, '/');
       const entry = {
-        path: trimStart(file.path, '/'),
+        path: normalizedPath,
         mode: '100644',
         type: 'blob',
         sha: file.sha,
       } as TreeEntry;
 
       if (file.newPath) {
-        toMove.push({ from: file.path, to: file.newPath, sha: file.sha as string });
+        const normalizedNewPath = trimStart(file.newPath, '/').replace(/\/{2,}/g, '/');
+        toMove.push({ from: normalizedPath, to: normalizedNewPath, sha: file.sha as string });
       } else {
         acc.push(entry);
       }
@@ -1413,8 +1415,8 @@ export default class API {
     }, [] as TreeEntry[]);
 
     for (const { from, to, sha } of toMove) {
-      const sourceDir = dirname(from);
-      const destDir = dirname(to);
+      const sourceDir = dirname(from).replace(/\/{2,}/g, '/');
+      const destDir = dirname(to).replace(/\/{2,}/g, '/');
       const files = await this.listFiles(sourceDir, { branch, depth: 100 });
       for (const file of files) {
         // delete current path
@@ -1426,7 +1428,7 @@ export default class API {
         });
         // create in new path
         tree.push({
-          path: file.path.replace(sourceDir, destDir),
+          path: file.path.replace(sourceDir, destDir).replace(/\/{2,}/g, '/'),
           mode: '100644',
           type: 'blob',
           sha: file.path === from ? sha : file.id,
