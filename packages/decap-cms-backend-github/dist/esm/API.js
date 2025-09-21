@@ -923,10 +923,12 @@ export default class API {
     await this.deleteBranch(branch);
   }
   async createRef(type, name, sha) {
+    // Normalize ref name: collapse // and strip any trailing '/index'
+    const normalized = name.replace(/\/{2,}/g, '/').replace(/\/index$/i, '');
     const result = await this.request(`${this.repoURL}/git/refs`, {
       method: 'POST',
       body: JSON.stringify({
-        ref: `refs/${type}/${name}`,
+        ref: `refs/${type}/${normalized}`,
         sha
       })
     });
