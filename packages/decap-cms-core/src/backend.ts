@@ -1121,13 +1121,18 @@ export class Backend {
       if (!selectAllowNewEntries(collection)) {
         throw new Error('Not allowed to create new entries in this collection');
       }
-      const slug = await this.generateUniqueSlug(
+      let slug = await this.generateUniqueSlug(
         collection,
         entryDraft.getIn(['entry', 'data']),
         config,
         usedSlugs,
         customPath,
       );
+      // Normalize slug for branch/content key: no leading slash, no trailing '/index' (with or without .md), collapse doubles
+      slug = String(slug)
+        .replace(/^\/+/, '')
+        .replace(/\/{2,}/g, '/')
+        .replace(/\/index(?:\.md)?$/i, '');
       let path = customPath || (selectEntryPath(collection, slug) as string);
       // Normalize any accidental duplicate or leading slashes
       path = String(path).replace(/\/{2,}/g, '/').replace(/^\/+/, '');

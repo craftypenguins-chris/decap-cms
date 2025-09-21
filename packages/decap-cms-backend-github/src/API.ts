@@ -1175,9 +1175,11 @@ export default class API {
   }
 
   async createRef(type: string, name: string, sha: string) {
+    // Normalize ref name: collapse // and strip any trailing '/index'
+    const normalized = name.replace(/\/{2,}/g, '/').replace(/\/index$/i, '');
     const result: Octokit.GitCreateRefResponse = await this.request(`${this.repoURL}/git/refs`, {
       method: 'POST',
-      body: JSON.stringify({ ref: `refs/${type}/${name}`, sha }),
+      body: JSON.stringify({ ref: `refs/${type}/${normalized}`, sha }),
     });
     return result;
   }
