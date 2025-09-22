@@ -852,22 +852,14 @@ export class Backend {
     }
     const newEntry = entryDraft.getIn(['entry', 'newRecord']) || false;
     const useWorkflow = selectUseWorkflow(config);
-
-    // Normalize customPath to avoid leading slash causing double separators when
-    // backends prefix with collection folder (e.g., "content/..." + "/slug").
-    const rawCustomPath = selectCustomPath(collection, entryDraft);
-    const customPath = rawCustomPath ? rawCustomPath.replace(/^\/+/, '') : rawCustomPath;
+    const customPath = selectCustomPath(collection, entryDraft);
     let dataFile;
     if (newEntry) {
       if (!selectAllowNewEntries(collection)) {
         throw new Error('Not allowed to create new entries in this collection');
       }
-      let slug = await this.generateUniqueSlug(collection, entryDraft.getIn(['entry', 'data']), config, usedSlugs, customPath);
-      // Normalize slug for branch/content key: no leading slash, no trailing '/index' (with or without .md), collapse doubles
-      slug = String(slug).replace(/^\/+/, '').replace(/\/{2,}/g, '/').replace(/\/index(?:\.md)?$/i, '');
+      const slug = await this.generateUniqueSlug(collection, entryDraft.getIn(['entry', 'data']), config, usedSlugs, customPath);
       let path = customPath || selectEntryPath(collection, slug);
-      // Normalize any accidental duplicate or leading slashes
-      path = String(path).replace(/\/{2,}/g, '/').replace(/^\/+/, '');
       dataFile = {
         path,
         slug,
@@ -876,9 +868,8 @@ export class Backend {
       updateAssetProxies(assetProxies, config, collection, entryDraft, path);
     } else {
       const slug = entryDraft.getIn(['entry', 'slug']);
-      let path = entryDraft.getIn(['entry', 'path']);
-      path = String(path).replace(/\/{2,}/g, '/').replace(/^\/+/, '');
-      const normalizedNewPath = customPath ? String(customPath).replace(/\/{2,}/g, '/').replace(/^\/+/, '') : undefined;
+      const path = entryDraft.getIn(['entry', 'path']);
+      const normalizedNewPath = customPath || undefined;
       dataFile = {
         path,
         // for workflow entries we refresh the slug on publish
