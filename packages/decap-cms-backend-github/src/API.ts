@@ -1175,11 +1175,9 @@ export default class API {
   }
 
   async createRef(type: string, name: string, sha: string) {
-    // Normalize ref name: collapse // and strip any trailing '/index'
-    const normalized = name.replace(/\/{2,}/g, '/').replace(/\/index$/i, '');
     const result: Octokit.GitCreateRefResponse = await this.request(`${this.repoURL}/git/refs`, {
       method: 'POST',
-      body: JSON.stringify({ ref: `refs/${type}/${normalized}`, sha }),
+      body: JSON.stringify({ ref: `refs/${type}/${name}`, sha }),
     });
     return result;
   }
@@ -1239,14 +1237,13 @@ export default class API {
       const message = String(e.message || '');
       if (message === 'Reference update failed') {
         await throwOnConflictingBranches(branchName, name => this.getBranch(name), API_NAME);
-      } else if (
-        message === 'Reference already exists' &&
-        branchName.startsWith(`${CMS_BRANCH_PREFIX}/`)
-      ) {
+      } else if (message === 'Reference already exists') {
         try {
           // this can happen if the branch wasn't deleted when the PR was merged
           // we backup the existing branch just in case and patch it with the new sha
-          await this.backupBranch(branchName);
+          if (branchName.startsWith(`${CMS_BRANCH_PREFIX}/`)) {
+            await this.backupBranch(branchName);
+          }
           const result = await this.patchBranch(branchName, sha, { force: true });
           return result;
         } catch (e) {
