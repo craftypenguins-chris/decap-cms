@@ -33,7 +33,8 @@
     "lint:format": "prettier \"{{packages,scripts}/**/,}*.{js,jsx,ts,tsx,css}\" --list-different",
     "format": "npm run lint:js -- --fix --quiet && npm run format:prettier -- --write",
     "format:prettier": "prettier \"{{packages,scripts}/**/,}*.{js,jsx,ts,tsx,css}\"",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "postbuild": "cd packages/decap-server/dist && npm i --package-lock-only --omit=dev || true"
   },
   "browserslist": [
     "last 2 Chrome versions",
@@ -124,7 +125,7 @@
     "node-fetch": "^2.3.0",
     "npm": "^9.9.2",
     "npm-run-all": "^4.1.5",
-    "nx": "^21.4.1",
+    "nx": "^21.5.3",
     "postcss": "^8.4.7",
     "postcss-scss": "^4.0.3",
     "prettier": "^2.3.0",
