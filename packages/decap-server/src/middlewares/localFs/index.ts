@@ -165,7 +165,7 @@ export function localFsMiddleware({ repoPath, logger }: FsOptions) {
           // Delete all data files
           await Promise.all(
             dataFiles.map(file => {
-              return deleteFile(repoPath, file.path).catch(err => {
+              return deleteFile(repoPath, file.path, logger).catch(err => {
                 logger.warn(`[fs] Failed to delete data file ${file.path}: ${err.message}`);
               });
             })
@@ -174,7 +174,7 @@ export function localFsMiddleware({ repoPath, logger }: FsOptions) {
           // Delete all asset files
           await Promise.all(
             assets.map(asset => {
-              return deleteFile(repoPath, asset.path).catch(err => {
+              return deleteFile(repoPath, asset.path, logger).catch(err => {
                 logger.warn(`[fs] Failed to delete asset ${asset.path}: ${err.message}`);
               });
             })
@@ -190,7 +190,7 @@ export function localFsMiddleware({ repoPath, logger }: FsOptions) {
             logger.info(`[fs] deleteMedia path=${mediaPath}`);
           } catch (_) {}
           
-          await deleteFile(repoPath, mediaPath).catch(err => {
+          await deleteFile(repoPath, mediaPath, logger).catch(err => {
             logger.warn(`[fs] Failed to delete media ${mediaPath}: ${err.message}`);
             throw err;
           });
@@ -201,13 +201,13 @@ export function localFsMiddleware({ repoPath, logger }: FsOptions) {
         }
         case 'deleteFile': {
           const { path: filePath } = body.params as DeleteFileParams;
-          await deleteFile(repoPath, filePath);
+          await deleteFile(repoPath, filePath, logger);
           res.json({ message: `deleted file ${filePath}` });
           break;
         }
         case 'deleteFiles': {
           const { paths } = body.params as DeleteFilesParams;
-          await Promise.all(paths.map(filePath => deleteFile(repoPath, filePath)));
+          await Promise.all(paths.map(filePath => deleteFile(repoPath, filePath, logger)));
           res.json({ message: `deleted files ${paths.join(', ')}` });
           break;
         }

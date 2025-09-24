@@ -58,8 +58,41 @@ export async function writeFile(filePath: string, content: any) {
   await fs.writeFile(filePath, content);
 }
 
-export async function deleteFile(repoPath: string, filePath: string) {
-  await fs.unlink(path.join(repoPath, filePath)).catch(() => undefined);
+export async function deleteFile(repoPath: string, filePath: string, logger?: any) {
+  const fullPath = path.join(repoPath, filePath);
+  await fs.unlink(fullPath).catch(() => undefined);
+  
+  // Clean up empty parent directories
+  await cleanupEmptyDirs(repoPath, path.dirname(filePath), logger);
+}
+
+async function cleanupEmptyDirs(repoPath: string, dirPath: string, logger?: any) {
+  // Don't try to delete the repo root or paths outside it
+  if (!dirPath || dirPath === '.' || dirPath === '/' || dirPath.startsWith('..')) {
+    return;
+  }
+  
+  const fullDirPath = path.join(repoPath, dirPath);
+  
+  try {
+    const files = await fs.readdir(fullDirPath);
+    
+    // If directory is empty, remove it and check parent
+    if (files.length === 0) {
+      await fs.rmdir(fullDirPath);
+      if (logger) {
+        try { logger.debug(`[fs] Removed empty directory: ${dirPath}`); } catch (_) {}
+      }
+      // Recursively check parent directory
+      const parentDir = path.dirname(dirPath);
+      if (parentDir !== dirPath) { // Avoid infinite loop at root
+        await cleanupEmptyDirs(repoPath, parentDir, logger);
+      }
+    }
+  } catch (e) {
+    // Directory doesn't exist or can't be read/deleted - that's okay
+    return;
+  }
 }
 
 async function moveFile(from: string, to: string) {

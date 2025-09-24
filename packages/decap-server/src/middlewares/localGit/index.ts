@@ -438,7 +438,7 @@ export function localGitMiddleware({ repoPath, logger }: GitOptions) {
             // Delete all data files
             await Promise.all(
               dataFiles.map(file => {
-                return deleteFile(repoPath, file.path).catch(err => {
+                return deleteFile(repoPath, file.path, logger).catch(err => {
                   logger.warn(`[git] Failed to delete data file ${file.path}: ${err.message}`);
                 });
               })
@@ -447,7 +447,7 @@ export function localGitMiddleware({ repoPath, logger }: GitOptions) {
             // Delete all asset files
             await Promise.all(
               assets.map(asset => {
-                return deleteFile(repoPath, asset.path).catch(err => {
+                return deleteFile(repoPath, asset.path, logger).catch(err => {
                   logger.warn(`[git] Failed to delete asset ${asset.path}: ${err.message}`);
                 });
               })
@@ -471,7 +471,7 @@ export function localGitMiddleware({ repoPath, logger }: GitOptions) {
           } catch (_) {}
           
           await runOnBranch(git, branch, async () => {
-            await deleteFile(repoPath, mediaPath).catch(err => {
+            await deleteFile(repoPath, mediaPath, logger).catch(err => {
               logger.warn(`[git] Failed to delete media ${mediaPath}: ${err.message}`);
               throw err;
             });
@@ -488,7 +488,7 @@ export function localGitMiddleware({ repoPath, logger }: GitOptions) {
             options: { commitMessage },
           } = body.params as DeleteFileParams;
           await runOnBranch(git, branch, async () => {
-            await deleteFile(repoPath, filePath);
+            await deleteFile(repoPath, filePath, logger);
             await commit(git, commitMessage);
           });
           res.json({ message: `deleted file ${filePath}` });
@@ -500,7 +500,7 @@ export function localGitMiddleware({ repoPath, logger }: GitOptions) {
             options: { commitMessage },
           } = body.params as DeleteFilesParams;
           await runOnBranch(git, branch, async () => {
-            await Promise.all(paths.map(filePath => deleteFile(repoPath, filePath)));
+            await Promise.all(paths.map(filePath => deleteFile(repoPath, filePath, logger)));
             await commit(git, commitMessage);
           });
           res.json({ message: `deleted files ${paths.join(', ')}` });
