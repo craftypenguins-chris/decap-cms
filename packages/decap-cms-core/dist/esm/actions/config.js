@@ -499,10 +499,18 @@ export function loadConfig(manualConfig = {}, onLoad) {
       const {
         mirrorProxyUrl
       } = await detectMirrorProxy(withLocalBackend.local_preview_mirror);
+      let configWithMirror = withLocalBackend;
       if (mirrorProxyUrl) {
-        withLocalBackend.backend.mirror_proxy_url = mirrorProxyUrl;
+        // Create a new config object to avoid mutation issues
+        configWithMirror = {
+          ...withLocalBackend,
+          backend: {
+            ...withLocalBackend.backend,
+            mirror_proxy_url: mirrorProxyUrl
+          }
+        };
       }
-      const normalizedConfig = normalizeConfig(withLocalBackend);
+      const normalizedConfig = normalizeConfig(configWithMirror);
       const config = applyDefaults(normalizedConfig);
       dispatch(configLoaded(config));
       if (typeof onLoad === 'function') {
