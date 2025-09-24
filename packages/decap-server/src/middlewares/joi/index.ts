@@ -20,6 +20,8 @@ const allowedActions = [
   'persistMedia',
   'deleteFile',
   'deleteFiles',
+  'deleteEntry',
+  'deleteMedia',
   'getDeployPreview',
 ];
 
@@ -210,6 +212,29 @@ export function defaultSchema({ path = requiredString } = {}) {
             options: Joi.object({
               commitMessage: requiredString,
             }).required(),
+          })
+          .required(),
+      },
+      {
+        is: 'deleteEntry',
+        then: defaultParams
+          .keys({
+            dataFiles: Joi.array().items(Joi.object({ path })).required(),
+            assets: Joi.array().items(Joi.object({ path })).required(),
+            options: Joi.object({
+              commitMessage: requiredString,
+            }).optional(),
+          })
+          .required(),
+      },
+      {
+        is: 'deleteMedia',
+        then: defaultParams
+          .keys({
+            path,
+            options: Joi.object({
+              commitMessage: requiredString,
+            }).optional(),
           })
           .required(),
       },
