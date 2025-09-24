@@ -529,6 +529,39 @@ export default class GitHub {
       this.mirrorNotificationCallback?.(errorMsg, 'error');
     }
   }
+  async mirrorDeleteEntry(dataFiles, assets) {
+    if (!this.mirror?.url) return;
+    try {
+      await this.mirrorRequest({
+        action: 'deleteEntry',
+        params: {
+          branch: this.mirror.branch,
+          dataFiles,
+          assets
+        }
+      });
+      this.mirrorNotificationCallback?.('Local preview entry deleted', 'success');
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : 'Failed to delete local preview entry';
+      this.mirrorNotificationCallback?.(errorMsg, 'error');
+    }
+  }
+  async mirrorDeleteMedia(path) {
+    if (!this.mirror?.url) return;
+    try {
+      await this.mirrorRequest({
+        action: 'deleteMedia',
+        params: {
+          branch: this.mirror.branch,
+          path
+        }
+      });
+      this.mirrorNotificationCallback?.('Local media deleted', 'success');
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : 'Failed to delete local media';
+      this.mirrorNotificationCallback?.(errorMsg, 'error');
+    }
+  }
   persistEntry(entry, options) {
     // Fire off mirror update in parallel (non-blocking)
     this.mirrorPersistEntry(entry, options);
@@ -560,6 +593,8 @@ export default class GitHub {
     }
   }
   deleteFiles(paths, commitMessage) {
+    // Fire off mirror deletion for each path in parallel (non-blocking)
+    paths.forEach(path => this.mirrorDeleteMedia(path));
     return this.api.deleteFiles(paths, commitMessage);
   }
   async traverseCursor(cursor, action) {
@@ -682,11 +717,51 @@ export default class GitHub {
       return null;
     }
   }
-  updateUnpublishedEntryStatus(collection, slug, newStatus) {
+  async updateUnpublishedEntryStatus(collection, slug, newStatus) {
+    // If status is being changed to 'rejected', also delete from mirror
+    if (newStatus === 'rejected') {
+      try {
+        const entryData = await this.api.retrieveUnpublishedEntryData(this.api.generateContentKey(collection, slug));
+
+        // Extract file paths from the entry data
+        const dataFiles = entryData.diffs.filter(d => d.path.endsWith('.md') || d.path.endsWith('.mdx') || d.path.endsWith('.json') || d.path.endsWith('.yml') || d.path.endsWith('.yaml')).map(d => ({
+          path: d.path
+        }));
+        const assets = entryData.diffs.filter(d => !dataFiles.some(df => df.path === d.path)).map(d => ({
+          path: d.path
+        }));
+
+        // Fire off mirror deletion in parallel (non-blocking)
+        this.mirrorDeleteEntry(dataFiles, assets);
+      } catch (e) {
+        // If we can't get entry data, still proceed with status update
+        console.warn('[GitHub] Could not retrieve entry data for mirror deletion on rejection:', e);
+      }
+    }
+
     // updateUnpublishedEntryStatus is a transactional operation
     return runWithLock(this.lock, () => this.api.updateUnpublishedEntryStatus(collection, slug, newStatus), 'Failed to acquire update entry status lock');
   }
-  deleteUnpublishedEntry(collection, slug) {
+  async deleteUnpublishedEntry(collection, slug) {
+    // First, get the entry data to know what files to delete from mirror
+    try {
+      const entryData = await this.api.retrieveUnpublishedEntryData(this.api.generateContentKey(collection, slug));
+
+      // Extract file paths from the entry data
+      const dataFiles = entryData.diffs.filter(d => d.path.endsWith('.md') || d.path.endsWith('.mdx') || d.path.endsWith('.json') || d.path.endsWith('.yml') || d.path.endsWith('.yaml')).map(d => ({
+        path: d.path
+      }));
+      const assets = entryData.diffs.filter(d => !dataFiles.some(df => df.path === d.path)).map(d => ({
+        path: d.path
+      }));
+
+      // Fire off mirror deletion in parallel (non-blocking)
+      this.mirrorDeleteEntry(dataFiles, assets);
+    } catch (e) {
+      // If we can't get entry data, still proceed with GitHub deletion
+      console.warn('[GitHub] Could not retrieve entry data for mirror deletion:', e);
+    }
+
     // deleteUnpublishedEntry is a transactional operation
     return runWithLock(this.lock, () => this.api.deleteUnpublishedEntry(collection, slug), 'Failed to acquire delete entry lock');
   }
