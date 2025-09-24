@@ -154,6 +154,53 @@ export function localFsMiddleware({ repoPath, logger }: FsOptions) {
           res.json(file);
           break;
         }
+        case 'deleteEntry': {
+          const { dataFiles = [], assets = [] } = body.params as { dataFiles?: { path: string }[], assets?: { path: string }[] };
+          try {
+            logger.info(
+              `[fs] deleteEntry dataFiles=${dataFiles.length} assets=${assets.length}`,
+            );
+          } catch (_) {}
+          
+          // Delete all data files
+          await Promise.all(
+            dataFiles.map(file => {
+              const fullPath = path.join(repoPath, file.path);
+              return deleteFile(repoPath, file.path).catch(err => {
+                logger.warn(`[fs] Failed to delete data file ${file.path}: ${err.message}`);
+              });
+            })
+          );
+          
+          // Delete all asset files
+          await Promise.all(
+            assets.map(asset => {
+              const fullPath = path.join(repoPath, asset.path);
+              return deleteFile(repoPath, asset.path).catch(err => {
+                logger.warn(`[fs] Failed to delete asset ${asset.path}: ${err.message}`);
+              });
+            })
+          );
+          
+          try { logger.debug('[fs] deleteEntry complete'); } catch (_) {}
+          res.json({ message: 'entry deleted' });
+          break;
+        }
+        case 'deleteMedia': {
+          const { path: mediaPath } = body.params as { path: string };
+          try {
+            logger.info(`[fs] deleteMedia path=${mediaPath}`);
+          } catch (_) {}
+          
+          await deleteFile(repoPath, mediaPath).catch(err => {
+            logger.warn(`[fs] Failed to delete media ${mediaPath}: ${err.message}`);
+            throw err;
+          });
+          
+          try { logger.debug('[fs] deleteMedia complete'); } catch (_) {}
+          res.json({ message: `deleted media ${mediaPath}` });
+          break;
+        }
         case 'deleteFile': {
           const { path: filePath } = body.params as DeleteFileParams;
           await deleteFile(repoPath, filePath);

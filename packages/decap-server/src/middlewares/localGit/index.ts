@@ -426,6 +426,62 @@ export function localGitMiddleware({ repoPath, logger }: GitOptions) {
           res.json(file);
           break;
         }
+        case 'deleteEntry': {
+          const { dataFiles = [], assets = [] } = body.params as { dataFiles?: { path: string }[], assets?: { path: string }[] };
+          try {
+            logger.info(
+              `[git] deleteEntry dataFiles=${dataFiles.length} assets=${assets.length}`,
+            );
+          } catch (_) {}
+          
+          await runOnBranch(git, branch, async () => {
+            // Delete all data files
+            await Promise.all(
+              dataFiles.map(file => {
+                return deleteFile(repoPath, file.path).catch(err => {
+                  logger.warn(`[git] Failed to delete data file ${file.path}: ${err.message}`);
+                });
+              })
+            );
+            
+            // Delete all asset files
+            await Promise.all(
+              assets.map(asset => {
+                return deleteFile(repoPath, asset.path).catch(err => {
+                  logger.warn(`[git] Failed to delete asset ${asset.path}: ${err.message}`);
+                });
+              })
+            );
+            
+            // Commit the deletions
+            const allPaths = [...dataFiles, ...assets].map(f => f.path);
+            if (allPaths.length > 0) {
+              await commit(git, `Mirror: delete entry files`);
+            }
+          });
+          
+          try { logger.debug('[git] deleteEntry complete'); } catch (_) {}
+          res.json({ message: 'entry deleted' });
+          break;
+        }
+        case 'deleteMedia': {
+          const { path: mediaPath } = body.params as { path: string };
+          try {
+            logger.info(`[git] deleteMedia path=${mediaPath}`);
+          } catch (_) {}
+          
+          await runOnBranch(git, branch, async () => {
+            await deleteFile(repoPath, mediaPath).catch(err => {
+              logger.warn(`[git] Failed to delete media ${mediaPath}: ${err.message}`);
+              throw err;
+            });
+            await commit(git, `Mirror: delete media ${mediaPath}`);
+          });
+          
+          try { logger.debug('[git] deleteMedia complete'); } catch (_) {}
+          res.json({ message: `deleted media ${mediaPath}` });
+          break;
+        }
         case 'deleteFile': {
           const {
             path: filePath,

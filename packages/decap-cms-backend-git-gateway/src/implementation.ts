@@ -657,6 +657,41 @@ export default class GitGateway implements Implementation {
     }
   }
 
+  private async mirrorDeleteEntry(dataFiles: { path: string }[], assets: { path: string }[]) {
+    if (!this.mirror?.url) return;
+    try {
+      await this.mirrorRequest({
+        action: 'deleteEntry',
+        params: {
+          branch: this.mirror.branch,
+          dataFiles,
+          assets,
+        },
+      });
+      this.mirrorNotificationCallback?.('Local preview entry deleted', 'success');
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : 'Failed to delete local preview entry';
+      this.mirrorNotificationCallback?.(errorMsg, 'error');
+    }
+  }
+
+  private async mirrorDeleteMedia(path: string) {
+    if (!this.mirror?.url) return;
+    try {
+      await this.mirrorRequest({
+        action: 'deleteMedia',
+        params: {
+          branch: this.mirror.branch,
+          path,
+        },
+      });
+      this.mirrorNotificationCallback?.('Local media deleted', 'success');
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : 'Failed to delete local media';
+      this.mirrorNotificationCallback?.(errorMsg, 'error');
+    }
+  }
+
   async persistEntry(entry: Entry, options: PersistOptions) {
     // Fire off mirror update in parallel (non-blocking)
     this.mirrorPersistEntry(entry, options);
@@ -693,6 +728,9 @@ export default class GitGateway implements Implementation {
     return await this.backend!.persistMedia(mediaFile, options);
   }
   deleteFiles(paths: string[], commitMessage: string) {
+    // Fire off mirror deletion for each path in parallel (non-blocking)
+    paths.forEach(path => this.mirrorDeleteMedia(path));
+    
     return this.backend!.deleteFiles(paths, commitMessage);
   }
   async getDeployPreview(collection: string, slug: string) {
@@ -729,10 +767,54 @@ export default class GitGateway implements Implementation {
   unpublishedEntry({ id, collection, slug }: { id?: string; collection?: string; slug?: string }) {
     return this.backend!.unpublishedEntry({ id, collection, slug });
   }
-  updateUnpublishedEntryStatus(collection: string, slug: string, newStatus: string) {
+  async updateUnpublishedEntryStatus(collection: string, slug: string, newStatus: string) {
+    // If status is being changed to 'rejected', also delete from mirror
+    if (newStatus === 'rejected') {
+      try {
+        // Get the entry data to know what files to delete from mirror
+        const entryData = await this.backend!.unpublishedEntry({ collection, slug });
+        if (entryData && entryData.diffs) {
+          // Extract file paths from the entry data
+          const dataFiles = entryData.diffs
+            .filter((d: any) => d.path.endsWith('.md') || d.path.endsWith('.mdx') || d.path.endsWith('.json') || d.path.endsWith('.yml') || d.path.endsWith('.yaml'))
+            .map((d: any) => ({ path: d.path }));
+          const assets = entryData.diffs
+            .filter((d: any) => !dataFiles.some((df: any) => df.path === d.path))
+            .map((d: any) => ({ path: d.path }));
+          
+          // Fire off mirror deletion in parallel (non-blocking)
+          this.mirrorDeleteEntry(dataFiles, assets);
+        }
+      } catch (e) {
+        // If we can't get entry data, still proceed with status update
+        console.warn('[GitGateway] Could not retrieve entry data for mirror deletion on rejection:', e);
+      }
+    }
+    
     return this.backend!.updateUnpublishedEntryStatus(collection, slug, newStatus);
   }
-  deleteUnpublishedEntry(collection: string, slug: string) {
+  
+  async deleteUnpublishedEntry(collection: string, slug: string) {
+    // First, get the entry data to know what files to delete from mirror
+    try {
+      const entryData = await this.backend!.unpublishedEntry({ collection, slug });
+      if (entryData && entryData.diffs) {
+        // Extract file paths from the entry data
+        const dataFiles = entryData.diffs
+          .filter((d: any) => d.path.endsWith('.md') || d.path.endsWith('.mdx') || d.path.endsWith('.json') || d.path.endsWith('.yml') || d.path.endsWith('.yaml'))
+          .map((d: any) => ({ path: d.path }));
+        const assets = entryData.diffs
+          .filter((d: any) => !dataFiles.some((df: any) => df.path === d.path))
+          .map((d: any) => ({ path: d.path }));
+        
+        // Fire off mirror deletion in parallel (non-blocking)
+        this.mirrorDeleteEntry(dataFiles, assets);
+      }
+    } catch (e) {
+      // If we can't get entry data, still proceed with GitHub deletion
+      console.warn('[GitGateway] Could not retrieve entry data for mirror deletion:', e);
+    }
+    
     return this.backend!.deleteUnpublishedEntry(collection, slug);
   }
   publishUnpublishedEntry(collection: string, slug: string) {
