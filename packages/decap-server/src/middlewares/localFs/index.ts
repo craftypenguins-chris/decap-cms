@@ -165,7 +165,6 @@ export function localFsMiddleware({ repoPath, logger }: FsOptions) {
           // Delete all data files
           await Promise.all(
             dataFiles.map(file => {
-              const fullPath = path.join(repoPath, file.path);
               return deleteFile(repoPath, file.path).catch(err => {
                 logger.warn(`[fs] Failed to delete data file ${file.path}: ${err.message}`);
               });
@@ -175,7 +174,6 @@ export function localFsMiddleware({ repoPath, logger }: FsOptions) {
           // Delete all asset files
           await Promise.all(
             assets.map(asset => {
-              const fullPath = path.join(repoPath, asset.path);
               return deleteFile(repoPath, asset.path).catch(err => {
                 logger.warn(`[fs] Failed to delete asset ${asset.path}: ${err.message}`);
               });
